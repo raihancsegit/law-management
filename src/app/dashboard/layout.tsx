@@ -21,9 +21,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('id', session.user.id)
     .single()
     
-  // if (profile?.role !== 'admin') {
-  //   return redirect('/unauthorized')
-  // }
+  if (profile?.role !== 'admin') {
+    return redirect('/unauthorized')
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
