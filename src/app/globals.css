@@ -51,3 +51,8 @@ body {
 .bg-law-blue {
   background-color: rgb(30 58 138 / var(--tw-bg-opacity, 1));
 }
+
+.c-bOcPnF-cmFMMs-color-primary {
+    background-color:#1e3a8a !important;
+    border-color: #1e3a8a !important;
+}

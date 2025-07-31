@@ -4,20 +4,22 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { handleSignOut } from '@/app/actions/authActions';
 
+// User টাইপে role property যোগ করা হয়েছে
 type User = {
   name: string;
   avatar_url: string | null;
+  role: 'lead' | 'client' | 'attorney' | 'admin'; // ভূমিকার টাইপ
   role_display: string;
 };
 
-// NavItem এখন 'pathname' props হিসেবে গ্রহণ করবে
+// NavItem কম্পোনেন্ট (অপরিবর্তিত)
 const NavItem = ({ href, icon, label, pathname }: { 
   href: string, 
   icon: string, 
   label: string, 
   pathname: string 
 }) => {
-  const isActive = pathname === href;
+  const isActive = pathname.startsWith(href); // startsWith ব্যবহার করলে সাব-রুটও অ্যাক্টিভ দেখাবে
 
   return (
     <li>
@@ -33,10 +35,30 @@ const NavItem = ({ href, icon, label, pathname }: {
   );
 };
 
-// মূল Sidebar কম্পোনেন্ট
 export default function Sidebar({ user }: { user: User }) {
-  // usePathname হুকটিকে এখানে, অর্থাৎ মূল ক্লায়েন্ট কম্পোনেন্টে কল করা হচ্ছে
   const pathname = usePathname();
+
+  // ভূমিকা অনুযায়ী মেনু আইটেমগুলো সংজ্ঞায়িত করা
+  const leadMenu = [
+    { href: "/lead-dashboard", icon: "fa-solid fa-home", label: "Dashboard" },
+    { href: "/lead-dashboard/consultation", icon: "fa-solid fa-calendar", label: "Schedule Consultation" },
+    { href: "/lead-dashboard/resources", icon: "fa-solid fa-book", label: "Resources" },
+  ];
+
+  const clientMenu = [
+    { href: "/lead-dashboard", icon: "fa-solid fa-home", label: "Dashboard" },
+    { href: "/lead-dashboard/documents", icon: "fa-solid fa-folder-open", label: "My Documents" },
+    { href: "/lead-dashboard/financials", icon: "fa-solid fa-clipboard-list", label: "Financial Questionnaire" },
+    { href: "/lead-dashboard/messages", icon: "fa-solid fa-comments", label: "Secure Messages" },
+  ];
+  
+  // ব্যবহারকারীর ভূমিকা অনুযায়ী সঠিক মেনুটি বেছে নেওয়া
+  const menuItems = user.role === 'client' ? clientMenu : leadMenu;
+
+  const commonMenuItems = [
+    { href: "/lead-dashboard/help", icon: "fa-solid fa-question-circle", label: "Help Centre" },
+    { href: "/lead-dashboard/contact", icon: "fa-solid fa-phone", label: "Contact Us" },
+  ];
 
   return (
     <aside className="bg-white border-r border-gray-200 w-64 flex-shrink-0 flex flex-col">
@@ -46,18 +68,19 @@ export default function Sidebar({ user }: { user: User }) {
       
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
-          {/* pathname ভ্যালুটি props হিসেবে পাস করা হচ্ছে */}
-          <NavItem href="/lead-dashboard" icon="fa-solid fa-home" label="Dashboard" pathname={pathname} />
-          <NavItem href="/lead-dashboard/consultation" icon="fa-solid fa-calendar" label="Schedule Consultation" pathname={pathname} />
-          <NavItem href="/lead-dashboard/resources" icon="fa-solid fa-book" label="Resources" pathname={pathname} />
+          {menuItems.map(item => (
+            <NavItem key={item.href} {...item} pathname={pathname} />
+          ))}
         </ul>
         
         <div className="border-t border-gray-200 mt-6 pt-6">
           <ul className="space-y-2">
-            <NavItem href="/lead-dashboard/help" icon="fa-solid fa-question-circle" label="Help Centre" pathname={pathname} />
-            <NavItem href="/lead-dashboard/contact" icon="fa-solid fa-phone" label="Contact Us" pathname={pathname} />
+            {commonMenuItems.map(item => (
+              <NavItem key={item.href} {...item} pathname={pathname} />
+            ))}
             <li>
               <form action={handleSignOut}>
+                <input type="hidden" name="redirectTo" value="/login" />
                 <button type="submit" className="w-full flex items-center px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50">
                   <i className="fa-solid fa-sign-out-alt mr-3 text-red-500 w-5 text-center"></i>
                   <span>Sign Out</span>

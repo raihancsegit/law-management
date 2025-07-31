@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { handleSignOut } from '@/app/actions/authActions';
 
 // নেভিগেশন লিঙ্কের ডেটার জন্য একটি টাইপ ইন্টারফেস তৈরি করুন
 interface NavLinkProps {
@@ -81,7 +82,7 @@ export default function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b border-gray-200 h-20">
         {!isCollapsed && (
           <Link href="/dashboard">
-            <h1 className="text-xl font-bold text-law-blue cursor-pointer">Cohen & Cohen P.C.</h1>
+            <h1 className="text-lg font-bold text-law-blue">Cohen & Cohen P.C.</h1>
           </Link>
         )}
         <button onClick={toggleSidebar} className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">
@@ -115,7 +116,7 @@ export default function Sidebar() {
                         pathname={pathname} 
                     />
                 ))}
-                 <li>
+                 {/* <li>
                     <button 
                         onClick={handleLogout}
                         title={isCollapsed ? 'Logout' : ''}
@@ -124,7 +125,24 @@ export default function Sidebar() {
                         <i className={`fa-solid fa-sign-out-alt w-5 text-center text-red-500 ${!isCollapsed ? 'mr-3' : ''}`}></i>
                         {!isCollapsed && <span>Logout</span>}
                     </button>
-                </li>
+                </li> */}
+                <li>
+  {/* <button>-কে একটি <form>-এর ভেতরে রাখা হয়েছে */}
+  <form action={handleSignOut} className="w-full">
+    {/* হিডেন ইনপুট ফিল্ডটি এখানে যোগ করা হয়েছে */}
+    <input type="hidden" name="redirectTo" value="/admin/login" />
+    
+    {/* বাটনটির type="submit" হবে */}
+    <button 
+      type="submit"
+      title={isCollapsed ? 'Logout' : ''}
+      className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+    >
+      <i className={`fa-solid fa-sign-out-alt w-5 text-center text-red-500 ${!isCollapsed ? 'mr-3' : ''}`}></i>
+      {!isCollapsed && <span>Logout</span>}
+    </button>
+  </form>
+</li>
             </ul>
         </div>
       </nav>

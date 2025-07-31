@@ -47,9 +47,22 @@ export async function handleLeadRegistration(formData: FormData) {
   return redirect('/check-email');
 }
 
-export async function handleSignOut() {
+// export async function handleSignOut() {
+//   const cookieStore = cookies();
+//   const supabase = createServerActionClient({ cookies: () => cookieStore });
+//   await supabase.auth.signOut();
+//   return redirect('/login');
+// }
+
+export async function handleSignOut(formData: FormData) {
   const cookieStore = cookies();
   const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  // ফর্ম থেকে redirectTo পাথের মান নেওয়া হচ্ছে
+  const redirectTo = formData.get('redirectTo')?.toString() || '/login';
+
   await supabase.auth.signOut();
-  return redirect('/login');
+  
+  // ডাইনামিক পাথে রিডাইরেক্ট করা হচ্ছে
+  return redirect(redirectTo);
 }
