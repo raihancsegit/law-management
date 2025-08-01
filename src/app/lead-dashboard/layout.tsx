@@ -1,12 +1,32 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import Sidebar from '@/components/lead-dashboard/Sidebar'; // আমরা এটি তৈরি করব
-import Header from '@/components/lead-dashboard/Header'; // আমরা এটি তৈরি করব
+import Sidebar from '@/components/lead-dashboard/Sidebar';
+import Header from '@/components/lead-dashboard/Header';
+
+// এই লাইনটি Next.js-কে এই রুটের ডেটা ক্যাশ না করতে বলে
+export const revalidate = 0;
 
 export default async function LeadDashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+
+  // Supabase ক্লায়েন্ট তৈরি করার সময় ক্যাশিং নিষ্ক্রিয় করার অপশন যোগ করা হয়েছে
+  // এটি নিশ্চিত করে যে ডাটাবেস থেকে সবসময় লেটেস্ট ডেটা আসবে
+  const supabase = createServerComponentClient({
+    cookies: () => cookieStore,
+  }, {
+    // এই অপশনটি Supabase ক্লায়েন্টের fetch অনুরোধের জন্য ক্যাশিং বন্ধ করে দেয়
+    options: {
+      global: {
+        fetch: (url, options) => {
+          return fetch(url, {
+            ...options,
+            cache: 'no-store', // ক্যাশিং নিষ্ক্রিয় করার মূল লাইন
+          });
+        },
+      },
+    },
+  });
 
   const { data: { session } } = await supabase.auth.getSession();
 
@@ -14,6 +34,7 @@ export default async function LeadDashboardLayout({ children }: { children: Reac
     return redirect('/login');
   }
 
+  // এখন এই কোয়েরিটি আর ক্যাশড ডেটা ব্যবহার করবে না
   const { data: profile } = await supabase
     .from('profiles')
     .select('first_name, last_name, avatar_url, role')
@@ -27,20 +48,18 @@ export default async function LeadDashboardLayout({ children }: { children: Reac
   const user = {
     name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
     avatar_url: profile.avatar_url,
+    role: profile.role, // Sidebar-এর জন্য role পাস করা হচ্ছে
     role_display: profile.role === 'lead' ? 'Prospective Client' : 'Client',
   };
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans">
-      {/* বাম পাশের সাইডবার */}
+      {/* user অবজেক্টটি এখন role সহ Sidebar-এ পাস করা হচ্ছে */}
       <Sidebar user={user} />
       
-      {/* ডান পাশের মূল কন্টেন্ট */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* উপরের হেডার */}
         <Header user={user} />
         
-        {/* children এখানে main কন্টেন্ট রেন্ডার করবে (যেমন dashboard, consultation পেজ) */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto">
           {children}
         </main>

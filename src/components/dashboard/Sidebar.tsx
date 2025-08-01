@@ -29,7 +29,7 @@ const navLinks: NavLinkProps[] = [
   { href: '/dashboard/users', icon: 'fa-users', label: 'Clients & Leads' },
   { href: '/dashboard/settings/users', icon: 'fa-user-gear', label: 'User Management' },
   { href: '/dashboard/settings/folders', icon: 'fa-folder-tree', label: 'Folder Management' },
-  { href: '/dashboard/settings/forms', icon: 'fa-file-lines', label: 'Form Management' },
+  { href: '/dashboard/forms', icon: 'fa-file-lines', label: 'Form Management' },
 ];
 
 const bottomLinks: NavLinkProps[] = [

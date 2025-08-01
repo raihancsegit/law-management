@@ -3,6 +3,7 @@
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 
 // ফাংশন ১: প্রতিটি ধাপে ডেটা সেভ করার জন্য (Next বাটন ক্লিক করলে)
 export async function handleSaveProgress(formData: FormData) {
@@ -47,10 +48,10 @@ export async function handleSubmitApplication(formData: FormData) {
   const supabase = createServerActionClient({ cookies: () => cookieStore });
 
   // ফর্ম থেকে রেজিস্ট্রেশনের জন্য প্রয়োজনীয় ডেটা নেওয়া হচ্ছে
-  const email = formData.get('email_address')?.toString();
+  const email = formData.get('email')?.toString();
   const password =formData.get('password')?.toString();
-  const firstName = formData.get('first_name')?.toString();
-  const lastName = formData.get('last_name')?.toString();
+  const firstName = formData.get('first_name_primary')?.toString();
+  const lastName = formData.get('last_name_primary')?.toString();
 
   if (!email || !password || !firstName || !lastName) {
     return redirect('/start-application?error=Core_information_(name, email, password)_is_missing.');
@@ -100,4 +101,75 @@ export async function handleSubmitApplication(formData: FormData) {
 
   // ৪. সফল হলে, ব্যবহারকারীকে ইমেইল চেক করার পেজে পাঠানো
   return redirect('/check-email');
+}
+
+
+
+// একটি নতুন ফিল্ড তৈরি করার অ্যাকশন
+export async function createFormField(formData: FormData) {
+  const cookieStore = cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  const rawData = {
+    form_id: formData.get('form_id'),
+    step: formData.get('step'),
+    field_order: formData.get('field_order'),
+    label: formData.get('label'),
+    field_type: formData.get('field_type'),
+    placeholder: formData.get('placeholder'),
+    is_required: formData.get('is_required') === 'on',
+    options: formData.get('options') ? JSON.parse(formData.get('options') as string) : null,
+  };
+
+  const { error } = await supabase.from('form_fields').insert(rawData);
+
+  if (error) {
+    return { error: 'Could not create field: ' + error.message };
+  }
+
+  revalidatePath(`/dashboard/forms/${rawData.form_id}`);
+  return { success: true };
+}
+
+// একটি ফিল্ড আপডেট করার অ্যাকশন
+export async function updateFormField(formData: FormData) {
+  const cookieStore = cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  const fieldId = formData.get('field_id');
+  const formId = formData.get('form_id');
+  
+  const rawData = {
+    step: formData.get('step'),
+    field_order: formData.get('field_order'),
+    label: formData.get('label'),
+    field_type: formData.get('field_type'),
+    placeholder: formData.get('placeholder'),
+    is_required: formData.get('is_required') === 'on',
+    options: formData.get('options') ? JSON.parse(formData.get('options') as string) : null,
+  };
+
+  const { error } = await supabase.from('form_fields').update(rawData).eq('id', fieldId);
+
+  if (error) {
+    return { error: 'Could not update field: ' + error.message };
+  }
+
+  revalidatePath(`/dashboard/forms/${formId}`);
+  return { success: true };
+}
+
+// একটি ফিল্ড ডিলিট করার অ্যাকশন
+export async function deleteFormField(fieldId: number, formId: number) {
+  const cookieStore = cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  const { error } = await supabase.from('form_fields').delete().eq('id', fieldId);
+
+  if (error) {
+    return { error: 'Could not delete field: ' + error.message };
+  }
+
+  revalidatePath(`/dashboard/forms/${formId}`);
+  return { success: true };
 }
