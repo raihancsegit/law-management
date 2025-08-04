@@ -34,7 +34,7 @@ export default function FormFieldModal({ formId, field, onComplete }: FormFieldM
     label: field?.label || '',
     field_type: field?.field_type || 'text',
     placeholder: field?.placeholder || '',
-    is_required: field?.is_required || true,
+    is_required: field?.is_required ?? true, 
     options: field?.options || [],
   });
 

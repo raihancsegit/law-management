@@ -117,7 +117,7 @@ export async function createFormField(formData: FormData) {
     label: formData.get('label'),
     field_type: formData.get('field_type'),
     placeholder: formData.get('placeholder'),
-    is_required: formData.get('is_required') === 'on',
+    is_required: formData.get('is_required') === 'true',
     options: formData.get('options') ? JSON.parse(formData.get('options') as string) : null,
   };
 
@@ -145,7 +145,7 @@ export async function updateFormField(formData: FormData) {
     label: formData.get('label'),
     field_type: formData.get('field_type'),
     placeholder: formData.get('placeholder'),
-    is_required: formData.get('is_required') === 'on',
+    is_required: formData.get('is_required') === 'true',
     options: formData.get('options') ? JSON.parse(formData.get('options') as string) : null,
   };
 
