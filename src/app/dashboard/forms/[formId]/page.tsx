@@ -49,23 +49,23 @@ export default async function FormFieldsPage({ params }: FormFieldsPageProps) {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <table className="w-full text-sm text-left text-gray-500">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3">Step</th>
-              <th className="px-6 py-3">Order</th>
-              <th className="px-6 py-3">Label</th>
-              <th className="px-6 py-3">Type</th>
-              <th className="px-6 py-3">Required</th>
-              <th className="px-6 py-3 text-right">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Step</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Label</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Required</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className='bg-white divide-y divide-gray-200'>
             {fields.map((field) => (
-              <tr key={field.id} className="bg-white border-b hover:bg-gray-50">
+              <tr key={field.id} className="hover:bg-gray-50 text-sm font-medium text-gray-500">
                 <td className="px-6 py-4">{field.step}</td>
                 <td className="px-6 py-4">{field.field_order}</td>
-                <td className="px-6 py-4 font-medium text-gray-900">{field.label}</td>
+                <td className="px-6 py-4 ">{field.label}</td>
                 <td className="px-6 py-4">{field.field_type}</td>
                 <td className="px-6 py-4">{field.is_required ? 'Yes' : 'No'}</td>
                 <td className="px-6 py-4 text-right flex justify-end space-x-2">
