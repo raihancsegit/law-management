@@ -27,8 +27,8 @@ interface NavLinkComponentProps {
 const navLinks: NavLinkProps[] = [
   { href: '/dashboard', icon: 'fa-chart-pie', label: 'Dashboard Overview' },
   { href: '/dashboard/users', icon: 'fa-users', label: 'Clients & Leads' },
-  { href: '/dashboard/settings/users', icon: 'fa-user-gear', label: 'User Management' },
-  { href: '/dashboard/settings/folders', icon: 'fa-folder-tree', label: 'Folder Management' },
+  { href: '/dashboard/users2', icon: 'fa-user-gear', label: 'User Management' },
+  { href: '/dashboard/folders', icon: 'fa-folder-tree', label: 'Folder Management' },
   { href: '/dashboard/forms', icon: 'fa-file-lines', label: 'Form Management' },
 ];
 
