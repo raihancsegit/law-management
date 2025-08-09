@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
- 
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb', // আমরা লিমিটটি আরও বাড়িয়ে 10MB করছি নিশ্চিত করার জন্য
+    },
+  },
   images: {
     remotePatterns: [
       {
@@ -9,11 +13,10 @@ const nextConfig = {
         port: '',
         pathname: '/api/**',
       },
-      // ভবিষ্যতে অন্য কোনো ডোমেইন প্রয়োজন হলে এখানে যোগ করতে পারেন
-      // যেমন, Supabase Storage-এর জন্য:
+      // আপনার Supabase হোস্টনেমটি এখানে সঠিক কিনা তা নিশ্চিত করুন
       {
         protocol: 'https',
-        hostname: 'xyzabc.supabase.co', // আপনার Supabase প্রজেক্ট URL-এর হোস্টনেম
+        hostname: 'your-project-ref.supabase.co', // যেমন: xyzabc.supabase.co
         port: '',
         pathname: '/storage/v1/object/public/**',
       },
@@ -21,4 +24,5 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// module.exports = nextConfig; // এই লাইনটি যদি থাকে, তাহলে নিচেরটি ব্যবহার করুন
+export default nextConfig; // ES Module-এর জন্য এটিই সঠিক এক্সপোর্ট পদ্ধতি
