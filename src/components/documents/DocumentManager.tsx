@@ -3,13 +3,14 @@ import { useState, useRef, ChangeEvent } from 'react';
 import { uploadClientFile, deleteClientFile } from '@/app/actions/documentActions';
 
 // একটি একক ফোল্ডার কার্ডের জন্য কম্পোনেন্ট
-const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, onDeleteSuccess }: {
+const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, onDeleteSuccess, isAdminView = false }: {
   folder: any;
   files: any[];
   clientRootPath: string;
   userId: string;
   onUploadSuccess: (newFiles: any[], folderName: string) => void;
   onDeleteSuccess: (fileId: number, folderName: string) => void;
+  isAdminView?: boolean;
 }) => {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -37,8 +38,12 @@ const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, on
       formData.append('file', file);
       formData.append('folderName', folder.name);
       formData.append('clientRootPath', clientRootPath);
-      // ownerId আর ক্লায়েন্ট থেকে পাঠানো হচ্ছে না, সার্ভার অ্যাকশন নিজে আইডি নেবে।
-      // formData.append('ownerId', userId); 
+      
+      // ফিক্স: শুধুমাত্র অ্যাডমিন ভিউতেই ownerId পাঠানো হবে।
+      // ক্লায়েন্ট ভিউতে, সার্ভার অ্যাকশন নিজে থেকেই সেশন থেকে আইডি নেবে।
+      if (isAdminView) {
+        formData.append('ownerId', userId);
+      }
 
       const result = await uploadClientFile(formData);
 
@@ -63,7 +68,7 @@ const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, on
   };
 
   const handleDelete = async (fileId: number, storagePath: string) => {
-    if (confirm(`Are you sure you want to delete this file?`)) {
+    if (confirm(`Are you sure you want to delete this file? This action cannot be undone.`)) {
         const result = await deleteClientFile(fileId, storagePath);
         if (result.error) {
             alert('Delete failed: ' + result.error);
@@ -157,9 +162,10 @@ const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, on
   );
 };
 
-
 // মূল DocumentManager কম্পোনেন্ট
-export default function DocumentManager({ predefinedFolders, customFolders, initialFiles, clientRootPath, userId, isAdminView = false }: {
+export default function DocumentManager({
+  predefinedFolders, customFolders, initialFiles, clientRootPath, userId, isAdminView = false
+}: {
   predefinedFolders: any[];
   customFolders: any[];
   initialFiles: any[];
@@ -216,9 +222,10 @@ export default function DocumentManager({ predefinedFolders, customFolders, init
               folder={folder}
               files={filesByFolder[folder.name] || []}
               clientRootPath={clientRootPath}
-              userId={userId} // অ্যাডমিন ভিউয়ের জন্য এটি এখনও প্রয়োজন হতে পারে
+              userId={userId}
               onUploadSuccess={handleUploadSuccess}
               onDeleteSuccess={handleDeleteSuccess}
+              isAdminView={isAdminView} // isAdminView প্রপটি পাস করা হচ্ছে
             />
           ))}
            {allFolders.length === 0 && (

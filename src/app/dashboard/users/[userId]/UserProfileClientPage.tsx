@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, type FC, type Dispatch, type SetStateAction, useTransition } from 'react'
+import { useState, useEffect,useRef ,type FC, type Dispatch, type SetStateAction, useTransition } from 'react'
 import type { UserProfile } from '@/types/user'
 import { updateUserProfileByAdmin } from '@/app/dashboard/users/actions'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { uploadClientFile, deleteClientFile, createSignedUrl } from '@/app/actions/documentActions'
 
 // Props-এর জন্য টাইপ সংজ্ঞা
 interface ClientPageProps {
@@ -99,8 +101,205 @@ const ProfileDetailsTab: FC<ProfileDetailsTabProps> = ({ profile, setProfile, is
 }
 
 const DocumentsTab: FC<{ userId: string }> = ({ userId }) => {
-    return <div className="p-6">Content for user documents will go here. User ID: {userId}</div>
-}
+    const supabase = createClientComponentClient();
+    const [loading, setLoading] = useState(true);
+    const [folders, setFolders] = useState<any[]>([]);
+    const [files, setFiles] = useState<any[]>([]);
+    const [profile, setProfile] = useState<any>(null);
+
+    useEffect(() => {
+        async function loadDocumentsData() {
+            setLoading(true);
+            const [profileRes, templateRes, filesRes] = await Promise.all([
+                supabase.from('profiles').select('first_name, last_name, role, id').eq('id', userId).single(),
+                supabase.from('folder_templates').select('structure').eq('id', 1).single(),
+                supabase.from('client_files').select('*').eq('owner_id', userId)
+            ]);
+            
+            if (profileRes.data) setProfile(profileRes.data);
+            if (templateRes.data) setFolders(templateRes.data.structure);
+            if (filesRes.data) setFiles(filesRes.data);
+            setLoading(false);
+        }
+        loadDocumentsData();
+    }, [userId, supabase]);
+    
+    if (loading) { return <div className="p-6 text-center">Loading documents...</div>; }
+    if (profile && profile.role !== 'client') { return <div className="p-6 text-center">Document management is for 'client' roles only.</div>; }
+
+    const handleUploadSuccess = (newFile: any) => {
+        // নতুন ফাইলটি files state-এ যোগ করা হচ্ছে
+        setFiles(prev => [...prev, newFile]);
+    };
+    
+    const handleDeleteSuccess = (fileId: number) => {
+        setFiles(prev => prev.filter(f => f.id !== fileId));
+    };
+
+    return (
+        <div className="p-6">
+            <div className="mb-6">
+                <h4 className="text-2xl font-bold text-gray-900 mb-2">Client Documents</h4>
+                <p className="text-gray-500">View and manage client's bankruptcy case documents</p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {folders.map((folder) => (
+                    <AdminFolderCard
+                        key={folder.id}
+                        folder={folder}
+                        files={files.filter(f => f.folder_name === folder.name)}
+                        profile={profile}
+                        onUploadSuccess={handleUploadSuccess}
+                        onDeleteSuccess={handleDeleteSuccess}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+};
+
+
+// AdminFolderCard (নতুন এবং ফিক্সড Helper কম্পוננט)
+const AdminFolderCard = ({ folder, files, profile, onUploadSuccess, onDeleteSuccess }: {
+    folder: any;
+    files: any[];
+    profile: any;
+    onUploadSuccess: (newFile: any) => void;
+    onDeleteSuccess: (fileId: number) => void;
+}) => {
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSelectedFile(e.target.files?.[0] || null);
+    };
+
+    const handleUpload = async () => {
+        if (!selectedFile) {
+            alert('Please select a file to upload.');
+            return;
+        }
+        setIsUploading(true);
+        const clientFolderName = `${profile.last_name}_${profile.first_name}_${profile.id}`.toLowerCase().replace(/\s+/g, '_');
+        const rootPath = `client-documents/${clientFolderName}`;
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('folderName', folder.name);
+        formData.append('clientRootPath', rootPath);
+        formData.append('ownerId', profile.id);
+
+        const result = await uploadClientFile(formData);
+        setIsUploading(false);
+
+        if (result.error) {
+            alert(`Upload failed: ${result.error}`);
+        } else {
+            alert('File uploaded successfully!');
+            onUploadSuccess(result.data);
+            setSelectedFile(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+    
+    const handleDelete = async (fileId: number, storagePath: string) => {
+        if (confirm('Are you sure you want to delete this file?')) {
+            const result = await deleteClientFile(fileId, storagePath);
+            if (result.error) {
+                alert(`Delete failed: ${result.error}`);
+            } else {
+                alert('File deleted successfully!');
+                onDeleteSuccess(fileId);
+            }
+        }
+    };
+    
+    const handleView = async (storagePath: string) => {
+        const result = await createSignedUrl(storagePath);
+        if (result.success && result.url) {
+            window.open(result.url, '_blank');
+        } else {
+            alert('Could not view file: ' + result.error);
+        }
+    };
+    
+    const handleDownload = async (storagePath: string) => {
+        const result = await createSignedUrl(storagePath, { download: true });
+        if (result.success && result.url) {
+            const a = document.createElement('a');
+            a.href = result.url;
+            a.download = storagePath.split('/').pop() || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } else {
+            alert('Could not download file: ' + result.error);
+        }
+    };
+    
+    const iconMap: { [key: string]: { icon: string; bg: string; text: string } } = {
+        'Financial': { icon: 'fa-chart-line', bg: 'bg-green-100', text: 'text-green-600' },
+        'Property': { icon: 'fa-home', bg: 'bg-blue-100', text: 'text-blue-600' },
+        'Debt': { icon: 'fa-receipt', bg: 'bg-red-100', text: 'text-red-600' },
+        'Income': { icon: 'fa-dollar-sign', bg: 'bg-purple-100', text: 'text-purple-600' },
+        'Legal': { icon: 'fa-gavel', bg: 'bg-indigo-100', text: 'text-indigo-600' },
+        'Other': { icon: 'fa-file', bg: 'bg-gray-100', text: 'text-gray-600' },
+        'Personal': { icon: 'fa-user', bg: 'bg-pink-100', text: 'text-pink-600' },
+    };
+    const folderStyle = iconMap[folder.name.split(' ')[0]] || iconMap['Other'];
+
+    return (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center mb-4">
+                <div className={`flex items-center justify-center h-12 w-12 rounded-lg ${folderStyle.bg} mr-4`}>
+                    <i className={`fa-solid ${folder.icon} ${folderStyle.text} text-xl`}></i>
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-medium text-gray-900">{folder.name}</h4>
+                        <span className={`text-xs px-2 py-1 rounded-full ${folder.isRequired ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
+                            {folder.isRequired ? 'Required' : 'Optional'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">{folder.description}</p>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                 <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
+                 <i className="fa-solid fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i>
+                 <p className="text-sm text-gray-600 mb-2">Upload document for client</p>
+                 <button 
+                     onClick={selectedFile ? handleUpload : () => fileInputRef.current?.click()} 
+                     disabled={isUploading} 
+                     className="px-4 py-2 bg-law-blue text-white rounded-lg text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
+                 >
+                     {isUploading ? 'Uploading...' : (selectedFile ? 'Upload Selected File' : 'Choose File')}
+                 </button>
+                 {selectedFile && <p className="text-xs text-gray-500 mt-2 truncate" title={selectedFile.name}>Selected: {selectedFile.name}</p>}
+            </div>
+            <div className="mt-4 pt-4 border-t">
+                <p className="text-xs text-gray-500 mb-2">Client uploaded files:</p>
+                <div className="space-y-1">
+                    {files.length > 0 ? files.map((file: any) => (
+                        <div key={file.id} className="flex items-center justify-between text-xs group">
+                           <div className="flex items-center min-w-0 flex-1">
+                                <i className="fa-solid fa-file-pdf text-red-500 mr-2"></i>
+                                <span className="text-gray-700 truncate" title={file.file_name}>{file.file_name}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                                <button onClick={() => handleView(file.storage_path)} className="text-gray-500 hover:text-blue-600 opacity-50 group-hover:opacity-100" title="View"><i className="fa-solid fa-eye"></i></button>
+                                <button onClick={() => handleDownload(file.storage_path)} className="text-gray-500 hover:text-green-600 opacity-50 group-hover:opacity-100" title="Download"><i className="fa-solid fa-download"></i></button>
+                                <button onClick={() => handleDelete(file.id, file.storage_path)} className="text-gray-500 hover:text-red-600 opacity-50 group-hover:opacity-100" title="Delete"><i className="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    )) : ( <p className="text-xs text-gray-400 italic">No files uploaded yet</p> )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const ApplicationDataTab: FC<{ userId: string }> = ({ userId }) => {
     return <div className="p-6">Content for application data will go here. User ID: {userId}</div>

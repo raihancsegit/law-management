@@ -4,68 +4,65 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
-/**
- * ক্লায়েন্টের জন্য একটি ফাইল আপলোড করে এবং ডাটাবেসে তার রেকর্ড তৈরি করে।
- * owner_id এবং uploaded_by সরাসরি সেশন থেকে নেওয়া হয় নিরাপত্তার জন্য।
- */
 export async function uploadClientFile(formData: FormData) {
   const cookieStore = cookies();
   const supabase = createServerActionClient({ cookies: () => cookieStore });
   
-  // ধাপ ১: সার্ভার থেকে সরাসরি বর্তমানে লগইন করা ইউজারকে পাওয়া
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Authentication required.' };
 
-  if (!user) {
-    return { error: 'You must be logged in to upload files.' };
-  }
+  // অ্যাডমিন কিনা, তা চেক করা
+  const { data: uploaderProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  const isUploaderAdmin = uploaderProfile?.role === 'admin';
 
   const file = formData.get('file') as File;
   const folderName = formData.get('folderName') as string;
   const clientRootPath = formData.get('clientRootPath') as string;
-  // const ownerId = formData.get('ownerId') as string; // <<--- এই লাইনটি আর নেই, কারণ এটি অনিরাপদ ছিল
+  let ownerId = formData.get('ownerId')?.toString(); // অ্যাডমিনের জন্য
 
-  if (!file || !folderName || !clientRootPath) {
+  // ফিক্স: যদি আপলোডার অ্যাডমিন না হয়, অথবা অ্যাডমিন হওয়া সত্ত্বেও ownerId না পাঠানো হয়,
+  // তাহলে ownerId হিসেবে বর্তমানে লগইন করা ইউজারের আইডি ব্যবহার করা হবে।
+  if (!isUploaderAdmin || !ownerId) {
+      ownerId = user.id;
+  }
+
+  // নিরাপত্তা চেক: যদি আপলোডার অ্যাডমিন না হয়, তাহলে সে শুধুমাত্র নিজের জন্য আপলোড করতে পারবে।
+  if (!isUploaderAdmin && user.id !== ownerId) {
+      return { error: 'Permission denied. You can only upload files for yourself.' };
+  }
+
+  if (!file || !folderName || !clientRootPath || !ownerId) {
     return { error: 'Missing required data for file upload.' };
   }
   
   const filePath = `${clientRootPath}/${folderName}/${Date.now()}_${file.name}`;
 
-  // Supabase Storage-এ ফাইল আপলোড
-  const { error: uploadError } = await supabase.storage
-    .from('client-files')
-    .upload(filePath, file);
+  const { error: uploadError } = await supabase.storage.from('client-files').upload(filePath, file);
+  if (uploadError) return { error: `Storage Error: ${uploadError.message}` };
 
-  if (uploadError) {
-    console.error('Storage Upload Error:', uploadError);
-    return { error: uploadError.message };
-  }
-
-  // client_files টেবিলে মেটাডেটা সেভ করা
   const { data: newFile, error: dbError } = await supabase
     .from('client_files')
     .insert({
-      owner_id: user.id, // ফিক্স: ক্লায়েন্ট থেকে না নিয়ে সরাসরি সেশন থেকে user.id ব্যবহার করা হচ্ছে
+      owner_id: ownerId,
       folder_name: folderName,
       file_name: file.name,
       storage_path: filePath,
       file_size: file.size,
       mime_type: file.type,
-      uploaded_by: user.id, // আপলোডারও লগইন করা ইউজার
+      uploaded_by: user.id,
     })
     .select()
     .single();
 
   if (dbError) {
-    console.error('DB Insert Error:', dbError);
     await supabase.storage.from('client-files').remove([filePath]);
-    return { error: dbError.message };
+    return { error: `Database Error: ${dbError.message}` };
   }
 
   revalidatePath('/lead-dashboard/documents');
-  revalidatePath(`/dashboard/users/${user.id}/documents`);
+  revalidatePath(`/dashboard/users/${ownerId}/documents`);
   return { success: true, data: newFile };
 }
-
 
 /**
  * স্টোরেজ এবং ডাটাবেস উভয় জায়গা থেকে একটি ফাইল ডিলিট করে।
@@ -115,4 +112,26 @@ export async function deleteClientFile(fileId: number, storagePath: string) {
     revalidatePath(`/dashboard/users/${fileToDelete.owner_id}/documents`);
   }
   return { success: true, fileId: fileId };
+}
+
+export async function createSignedUrl(storagePath: string, options?: { download: boolean }) {
+  const cookieStore = cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  
+  // RLS পলিসি চেক করার জন্য ইউজারের তথ্য নেওয়া হচ্ছে
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Authentication required.' };
+  
+  const { data, error } = await supabase.storage
+    .from('client-files')
+    .createSignedUrl(storagePath, 60, { // URLটি ৬০ সেকেন্ডের জন্য বৈধ থাকবে
+      download: options?.download || false // download:true হলে ফাইলটি ডাউনলোড হবে, false হলে ব্রাউজারে দেখাবে
+    });
+
+  if (error) {
+    console.error('Error creating signed URL:', error);
+    return { error: 'Could not create a link for this file.' };
+  }
+
+  return { success: true, url: data.signedUrl };
 }
