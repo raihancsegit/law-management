@@ -4,6 +4,80 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
+type FolderData = {
+  folderName: string;
+  description: string;
+  icon: string;
+  isRequired: boolean;
+};
+
+export async function createCustomFolder(folderData: any) {
+  console.log('--- Action: createCustomFolder started ---');
+  console.log('Received Folder Data:', folderData);
+
+  const cookieStore = cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    console.error('Authentication Error:', userError?.message || 'User not found.');
+    return { error: 'Authentication required. Please log in again.' };
+  }
+  
+  console.log('Authenticated User ID:', user.id);
+
+  const trimmedFolderName = folderData.folderName?.trim();
+  if (!trimmedFolderName || trimmedFolderName.length < 3) {
+    const errorMsg = 'Folder name must be at least 3 characters long.';
+    console.error('Validation Error:', errorMsg);
+    return { error: errorMsg };
+  }
+
+  const newRecord = {
+    owner_id: user.id,
+    folder_name: trimmedFolderName,
+    description: folderData.description,
+    icon: folderData.icon,
+    is_required: folderData.isRequired,
+  };
+  
+  console.log('Attempting to insert into client_custom_folders:', newRecord);
+
+  const { data: newFolder, error } = await supabase
+    .from('client_custom_folders')
+    .insert(newRecord)
+    .select()
+    .single();
+
+  if (error) {
+    // === এখানে আসল সমস্যাটি ধরা পড়বে ===
+    console.error('!!! Supabase Insert Error:', error);
+    console.error('Error Details:', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+
+    if (error.code === '23505') {
+      return { error: `A folder with the name "${trimmedFolderName}" already exists.` };
+    }
+    return { error: `Database Error: ${error.message}` };
+  }
+  
+  if (!newFolder) {
+      console.error('Insert was successful but no data was returned.');
+      return { error: 'Folder created, but could not be retrieved.' };
+  }
+
+  console.log('--- Insert Successful! ---');
+  console.log('Returned new folder:', newFolder);
+
+  revalidatePath('/lead-dashboard/documents');
+  return { success: true, data: newFolder };
+}
+
 export async function uploadClientFile(formData: FormData) {
   const cookieStore = cookies();
   const supabase = createServerActionClient({ cookies: () => cookieStore });
@@ -134,4 +208,33 @@ export async function createSignedUrl(storagePath: string, options?: { download:
   }
 
   return { success: true, url: data.signedUrl };
+}
+
+export async function deleteUserCustomFolderByAdmin(folderId: number, ownerId: string) {
+  const cookieStore = cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  // অ্যাডমিন কিনা তা নিশ্চিত করা
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', user?.id).single();
+  if (!user || adminProfile?.role !== 'admin') {
+      return { error: 'Permission denied. Only admins can perform this action.' };
+  }
+  
+  // দ্রষ্টব্য: এই ফোল্ডারের ভেতরের ফাইলগুলোও ডিলিট করার জন্য অতিরিক্ত লজিক প্রয়োজন হবে।
+  // আমরা Supabase Edge Function দিয়ে এটি স্বয়ংক্রিয়ভাবে করতে পারি, অথবা এখানে ম্যানুয়ালি করতে পারি।
+
+  const { error } = await supabase
+    .from('client_custom_folders')
+    .delete()
+    .eq('id', folderId)
+    .eq('owner_id', ownerId); // নিশ্চিত করা যে সঠিক ইউজারের ফোল্ডার ডিলিট হচ্ছে
+
+  if (error) {
+    console.error("Admin delete custom folder error:", error);
+    return { error: 'Could not delete the custom folder.' };
+  }
+
+  revalidatePath(`/dashboard/users/${ownerId}/documents`);
+  return { success: true };
 }

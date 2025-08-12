@@ -1,6 +1,88 @@
 'use client';
-import { useState, useRef, ChangeEvent } from 'react';
-import { uploadClientFile, deleteClientFile } from '@/app/actions/documentActions';
+import { useState, useRef, ChangeEvent ,useEffect} from 'react';
+import { uploadClientFile, deleteClientFile, createCustomFolder,deleteUserCustomFolderByAdmin  } from '@/app/actions/documentActions';
+
+// Create Folder Modal Component (এই ফাইলের ভেতরেই)
+const CreateFolderModal = ({ onClose, onSave }: { 
+    onClose: () => void, 
+    onSave: (data: any) => Promise<{ error?: string | null }> 
+}) => {
+    const [formData, setFormData] = useState({
+        folderName: '', description: '', icon: 'fa-folder', isRequired: false
+    });
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value, type } = e.target;
+        if (type === 'checkbox') {
+          const { checked } = e.target as HTMLInputElement;
+          setFormData(prev => ({ ...prev, [name]: checked }));
+        } else {
+          setFormData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        const result = await onSave(formData);
+        setIsLoading(false);
+        if (!result.error) {
+            onClose();
+        } else {
+            alert(result.error);
+        }
+    };
+    
+    const iconOptions = [
+      { value: 'fa-user', label: 'User' },
+      { value: 'fa-chart-line', label: 'Financial' },
+      { value: 'fa-credit-card', label: 'Credit/Debt' },
+      { value: 'fa-home', label: 'Property' },
+      { value: 'fa-dollar-sign', label: 'Income' },
+      { value: 'fa-gavel', label: 'Legal' },
+      { value: 'fa-folder', label: 'General (Default)' },
+    ];
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
+              <h3 className="text-lg font-bold mb-4">Create New Folder</h3>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Folder Name *</label>
+                    <input name="folderName" value={formData.folderName} onChange={handleChange} required className="w-full p-2 border rounded-lg"/>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Description</label>
+                    <textarea name="description" value={formData.description} onChange={handleChange} className="w-full p-2 border rounded-lg"/>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Icon</label>
+                        <select name="icon" value={formData.icon} onChange={handleChange} className="w-full p-2 border rounded-lg">
+                           {iconOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Requirement</label>
+                        <select name="isRequired" value={String(formData.isRequired)} onChange={(e) => setFormData(prev => ({...prev, isRequired: e.target.value === 'true'}))} className="w-full p-2 border rounded-lg">
+                           <option value="false">Optional</option>
+                           <option value="true">Required</option>
+                        </select>
+                      </div>
+                  </div>
+                  <div className="flex justify-end space-x-3 pt-4 border-t">
+                      <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-lg text-sm">Cancel</button>
+                      <button type="submit" disabled={isLoading} className="px-4 py-2 bg-law-blue text-white rounded-lg text-sm disabled:bg-gray-400">
+                          {isLoading ? 'Creating...' : 'Create Folder'}
+                      </button>
+                  </div>
+              </form>
+          </div>
+      </div>
+    );
+};
 
 // একটি একক ফোল্ডার কার্ডের জন্য কম্পোনেন্ট
 const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, onDeleteSuccess, isAdminView = false }: {
@@ -162,9 +244,14 @@ const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, on
   );
 };
 
-// মূল DocumentManager কম্পোনেন্ট
+// মূল DocumentManager কম্পোনेंट (আপডেট করা)
 export default function DocumentManager({
-  predefinedFolders, customFolders, initialFiles, clientRootPath, userId, isAdminView = false
+  predefinedFolders, 
+  customFolders: initialCustomFolders, 
+  initialFiles, 
+  clientRootPath, 
+  userId, 
+  isAdminView = false
 }: {
   predefinedFolders: any[];
   customFolders: any[];
@@ -176,13 +263,38 @@ export default function DocumentManager({
   const [filesByFolder, setFilesByFolder] = useState(() => {
     const grouped: Record<string, any[]> = {};
     initialFiles.forEach((file: any) => {
-      if (!grouped[file.folder_name]) {
-        grouped[file.folder_name] = [];
-      }
+      if (!grouped[file.folder_name]) grouped[file.folder_name] = [];
       grouped[file.folder_name].push(file);
     });
     return grouped;
   });
+
+  const [customFolders, setCustomFolders] = useState(initialCustomFolders);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [allFolders, setAllFolders] = useState(() => {
+    const formattedCustomFolders = initialCustomFolders.map(f => ({
+      id: `custom-${f.id}`,
+      name: f.folder_name,
+      description: f.description,
+      icon: f.icon,
+      isRequired: f.is_required,
+      isCustom: true // কাস্টম ফোল্ডার চিহ্নিত করার জন্য
+    }));
+    return [...predefinedFolders, ...formattedCustomFolders];
+  });
+
+  useEffect(() => {
+    const formattedCustomFolders = initialCustomFolders.map(f => ({
+      id: `custom-${f.id}`,
+      name: f.folder_name,
+      description: f.description,
+      icon: f.icon,
+      isRequired: f.is_required,
+      isCustom: true,
+    }));
+    setAllFolders([...predefinedFolders, ...formattedCustomFolders]);
+  }, [initialCustomFolders, predefinedFolders]);
 
   const handleUploadSuccess = (newFiles: any[], folderName: string) => {
     setFilesByFolder(prev => ({
@@ -193,12 +305,29 @@ export default function DocumentManager({
 
   const handleDeleteSuccess = (fileId: number, folderName: string) => {
     setFilesByFolder(prev => ({
-        ...prev,
-        [folderName]: prev[folderName].filter(file => file.id !== fileId),
+      ...prev,
+      [folderName]: prev[folderName].filter(file => file.id !== fileId),
     }));
   };
+  
+ const handleCreateFolder = async (folderData: any) => {
+    const result = await createCustomFolder(folderData);
+    if (result.success && result.data) {
+      const newFolder = {
+        id: `custom-${result.data.id}`,
+        name: result.data.folder_name,
+        description: result.data.description,
+        icon: result.data.icon,
+        isRequired: result.data.is_required,
+        isCustom: true,
+      };
+      // এখন একটি মাত্র state, `allFolders`-কে আপডেট করা হচ্ছে
+      setAllFolders(prev => [...prev, newFolder]);
+    }
+    return { error: result.error || null };
+  };
 
-  const allFolders = [...predefinedFolders, ...customFolders];
+ 
 
   return (
     <div id="documents-section" className={isAdminView ? '' : 'p-6'}>
@@ -209,7 +338,7 @@ export default function DocumentManager({
             <p className="text-gray-500">{isAdminView ? 'Manage this client’s documents' : 'Upload and manage your case documents'}</p>
           </div>
           {!isAdminView && (
-            <button className="px-4 py-2 bg-gray-200 text-sm font-medium rounded-lg hover:bg-gray-300">
+            <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-gray-200 text-sm font-medium rounded-lg hover:bg-gray-300">
               <i className="fa-solid fa-folder-plus mr-2"></i>Create Custom Folder
             </button>
           )}
@@ -225,16 +354,21 @@ export default function DocumentManager({
               userId={userId}
               onUploadSuccess={handleUploadSuccess}
               onDeleteSuccess={handleDeleteSuccess}
-              isAdminView={isAdminView} // isAdminView প্রপটি পাস করা হচ্ছে
+              isAdminView={isAdminView}
             />
           ))}
            {allFolders.length === 0 && (
                 <p className="text-center text-gray-500 py-10 col-span-full">
-                    Folders for this client have not been generated yet. Please convert the user to a 'client' from the admin panel.
+                    Folders for this client have not been generated yet.
                 </p>
             )}
         </div>
       </div>
+      
+      {isModalOpen && <CreateFolderModal onClose={() => setIsModalOpen(false)} onSave={handleCreateFolder} />}
     </div>
   );
 }
+
+
+

@@ -27,21 +27,32 @@ export default async function MyDocumentsPage() {
       );
   }
 
-  const [templateRes, filesRes] = await Promise.all([
+  // ========================================================
+  // == এখানে পরিবর্তনটি করা হয়েছে ==
+  // ========================================================
+  const [templateRes, customFoldersRes, filesRes] = await Promise.all([
     supabase.from('folder_templates').select('structure').eq('id', 1).single(),
+    // client_custom_folders টেবিল থেকে ডেটা আনা হচ্ছে
+    supabase.from('client_custom_folders').select('*').eq('owner_id', user.id),
     supabase.from('client_files').select('*').eq('owner_id', user.id)
   ]);
+  // ========================================================
   
   const predefinedFolders = templateRes.data?.structure || [];
+  // ========================================================
+  // == এবং এখানে পরিবর্তনটি করা হয়েছে ==
+  // ========================================================
+  const customFolders = customFoldersRes.data || [];
+  // ========================================================
+  
   const allFiles = filesRes.data || [];
   const clientFolderName = `${profile.last_name}_${profile.first_name}_${profile.id}`.toLowerCase().replace(/\s+/g, '_');
   const rootPath = `client-documents/${clientFolderName}`;
 
-  // DocumentManager নিজেই এখন একটি পূর্ণাঙ্গ UI রেন্ডার করে
   return (
     <DocumentManager
       predefinedFolders={predefinedFolders}
-      customFolders={[]}
+      customFolders={customFolders} // এখন খালি অ্যারের পরিবর্তে আসল ডেটা পাস করা হচ্ছে
       initialFiles={allFiles}
       clientRootPath={rootPath}
       userId={user.id}
