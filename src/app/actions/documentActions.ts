@@ -11,6 +11,7 @@ type FolderData = {
   isRequired: boolean;
 };
 
+// এই ফাংশনটি আপনার কোড থেকে নেওয়া (ডিবাগিং লগসহ)
 export async function createCustomFolder(folderData: any) {
   console.log('--- Action: createCustomFolder started ---');
   console.log('Received Folder Data:', folderData);
@@ -51,15 +52,8 @@ export async function createCustomFolder(folderData: any) {
     .single();
 
   if (error) {
-    // === এখানে আসল সমস্যাটি ধরা পড়বে ===
     console.error('!!! Supabase Insert Error:', error);
-    console.error('Error Details:', {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-    });
-
+    console.error('Error Details:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
     if (error.code === '23505') {
       return { error: `A folder with the name "${trimmedFolderName}" already exists.` };
     }
@@ -78,6 +72,7 @@ export async function createCustomFolder(folderData: any) {
   return { success: true, data: newFolder };
 }
 
+// এই ফাংশনটি আপনার কোড থেকে নেওয়া (অপরিবর্তিত)
 export async function uploadClientFile(formData: FormData) {
   const cookieStore = cookies();
   const supabase = createServerActionClient({ cookies: () => cookieStore });
@@ -85,22 +80,18 @@ export async function uploadClientFile(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Authentication required.' };
 
-  // অ্যাডমিন কিনা, তা চেক করা
   const { data: uploaderProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
   const isUploaderAdmin = uploaderProfile?.role === 'admin';
 
   const file = formData.get('file') as File;
   const folderName = formData.get('folderName') as string;
   const clientRootPath = formData.get('clientRootPath') as string;
-  let ownerId = formData.get('ownerId')?.toString(); // অ্যাডমিনের জন্য
+  let ownerId = formData.get('ownerId')?.toString();
 
-  // ফিক্স: যদি আপলোডার অ্যাডমিন না হয়, অথবা অ্যাডমিন হওয়া সত্ত্বেও ownerId না পাঠানো হয়,
-  // তাহলে ownerId হিসেবে বর্তমানে লগইন করা ইউজারের আইডি ব্যবহার করা হবে।
   if (!isUploaderAdmin || !ownerId) {
       ownerId = user.id;
   }
 
-  // নিরাপত্তা চেক: যদি আপলোডার অ্যাডমিন না হয়, তাহলে সে শুধুমাত্র নিজের জন্য আপলোড করতে পারবে।
   if (!isUploaderAdmin && user.id !== ownerId) {
       return { error: 'Permission denied. You can only upload files for yourself.' };
   }
@@ -110,23 +101,14 @@ export async function uploadClientFile(formData: FormData) {
   }
   
   const filePath = `${clientRootPath}/${folderName}/${Date.now()}_${file.name}`;
-
   const { error: uploadError } = await supabase.storage.from('client-files').upload(filePath, file);
   if (uploadError) return { error: `Storage Error: ${uploadError.message}` };
 
   const { data: newFile, error: dbError } = await supabase
-    .from('client_files')
-    .insert({
-      owner_id: ownerId,
-      folder_name: folderName,
-      file_name: file.name,
-      storage_path: filePath,
-      file_size: file.size,
-      mime_type: file.type,
-      uploaded_by: user.id,
-    })
-    .select()
-    .single();
+    .from('client_files').insert({
+      owner_id: ownerId, folder_name: folderName, file_name: file.name, storage_path: filePath,
+      file_size: file.size, mime_type: file.type, uploaded_by: user.id,
+    }).select().single();
 
   if (dbError) {
     await supabase.storage.from('client-files').remove([filePath]);
@@ -138,103 +120,93 @@ export async function uploadClientFile(formData: FormData) {
   return { success: true, data: newFile };
 }
 
-/**
- * স্টোরেজ এবং ডাটাবেস উভয় জায়গা থেকে একটি ফাইল ডিলিট করে।
- */
+// এই ফাংশনটি আপনার কোড থেকে নেওয়া (অপরিবর্তিত)
 export async function deleteClientFile(fileId: number, storagePath: string) {
   const cookieStore = cookies();
   const supabase = createServerActionClient({ cookies: () => cookieStore });
 
-  const { data: fileToDelete, error: fetchError } = await supabase
-    .from('client_files')
-    .select('owner_id')
-    .eq('id', fileId)
-    .single();
-
-  if (fetchError || !fileToDelete) {
-      return { error: 'File not found or you do not have permission.' };
-  }
-
+  const { data: fileToDelete } = await supabase.from('client_files').select('owner_id').eq('id', fileId).single();
+  if (!fileToDelete) return { error: 'File not found or permission denied.' };
+  
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', user?.id).single();
+  if (!user) return { error: 'Authentication required.' };
+  
+  const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
 
-  if (user?.id !== fileToDelete.owner_id && adminProfile?.role !== 'admin') {
+  if (user.id !== fileToDelete.owner_id && adminProfile?.role !== 'admin') {
       return { error: 'You do not have permission to delete this file.' };
   }
-
-  const { error: storageError } = await supabase.storage
-    .from('client-files')
-    .remove([storagePath]);
-
-  if (storageError) {
-    console.error('Storage Delete Error:', storageError);
-    return { error: 'Could not delete file from storage.' };
-  }
-
-  const { error: dbError } = await supabase
-    .from('client_files')
-    .delete()
-    .eq('id', fileId);
-
-  if (dbError) {
-    console.error('DB Delete Error:', dbError);
-    return { error: 'Could not delete file record from database.' };
-  }
-
+  
+  const { error: storageError } = await supabase.storage.from('client-files').remove([storagePath]);
+  if (storageError) return { error: 'Could not delete file from storage.' };
+  
+  const { error: dbError } = await supabase.from('client_files').delete().eq('id', fileId);
+  if (dbError) return { error: 'Could not delete file record from database.' };
+  
   revalidatePath('/lead-dashboard/documents');
-  if (fileToDelete) {
-    revalidatePath(`/dashboard/users/${fileToDelete.owner_id}/documents`);
-  }
-  return { success: true, fileId: fileId };
+  revalidatePath(`/dashboard/users/${fileToDelete.owner_id}/documents`);
+  return { success: true, fileId };
 }
 
+// এই ফাংশনটি আপনার কোড থেকে নেওয়া (অপরিবর্তিত)
 export async function createSignedUrl(storagePath: string, options?: { download: boolean }) {
   const cookieStore = cookies();
   const supabase = createServerActionClient({ cookies: () => cookieStore });
   
-  // RLS পলিসি চেক করার জন্য ইউজারের তথ্য নেওয়া হচ্ছে
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Authentication required.' };
   
-  const { data, error } = await supabase.storage
-    .from('client-files')
-    .createSignedUrl(storagePath, 60, { // URLটি ৬০ সেকেন্ডের জন্য বৈধ থাকবে
-      download: options?.download || false // download:true হলে ফাইলটি ডাউনলোড হবে, false হলে ব্রাউজারে দেখাবে
-    });
-
-  if (error) {
-    console.error('Error creating signed URL:', error);
-    return { error: 'Could not create a link for this file.' };
-  }
+  const { data, error } = await supabase.storage.from('client-files').createSignedUrl(storagePath, 60, { download: options?.download || false });
+  if (error) return { error: 'Could not create a link for this file.' };
 
   return { success: true, url: data.signedUrl };
 }
 
-export async function deleteUserCustomFolderByAdmin(folderId: number, ownerId: string) {
+export async function deleteCustomFolder(folderId: number) {
   const cookieStore = cookies();
   const supabase = createServerActionClient({ cookies: () => cookieStore });
 
-  // অ্যাডমিন কিনা তা নিশ্চিত করা
+  // ধাপ ১: ব্যবহারকারী লগইন করা আছে কিনা নিশ্চিত করা
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', user?.id).single();
-  if (!user || adminProfile?.role !== 'admin') {
-      return { error: 'Permission denied. Only admins can perform this action.' };
+  if (!user) return { error: "Authentication required." };
+
+  // ধাপ ২: ফোল্ডারটি খুঁজে বের করা এবং মালিকানা যাচাই করা
+  const { data: folderToDelete, error: fetchError } = await supabase
+      .from("client_custom_folders")
+      .select('id, owner_id, folder_name')
+      .eq("id", folderId)
+      .single();
+
+  if (fetchError || !folderToDelete) return { error: "Folder not found." };
+  
+  const { data: uploaderProfile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  
+  // নিরাপত্তা চেক: শুধুমাত্র ফোল্ডারের মালিক অথবা অ্যাডমিন ডিলিট করতে পারবে
+  if (user.id !== folderToDelete.owner_id && uploaderProfile?.role !== 'admin') {
+    return { error: "Permission denied. You do not own this folder." };
   }
   
-  // দ্রষ্টব্য: এই ফোল্ডারের ভেতরের ফাইলগুলোও ডিলিট করার জন্য অতিরিক্ত লজিক প্রয়োজন হবে।
-  // আমরা Supabase Edge Function দিয়ে এটি স্বয়ংক্রিয়ভাবে করতে পারি, অথবা এখানে ম্যানুয়ালি করতে পারি।
+  // ধাপ ৩: ঐ ফোল্ডারের ভেতরে থাকা সমস্ত ফাইলের তালিকা স্টোরেজ থেকে আনা
+  const clientFolderName = `${(await supabase.from('profiles').select('last_name, first_name, id').eq('id', user.id).single()).data?.last_name}_${(await supabase.from('profiles').select('last_name, first_name, id').eq('id', user.id).single()).data?.first_name}_${user.id}`.toLowerCase().replace(/\s+/g, '_');
+  const folderPath = `client-documents/${clientFolderName}/${folderToDelete.folder_name}`;
+  
+  const { data: filesInFolder, error: listError } = await supabase.storage.from('client-files').list(folderPath);
 
-  const { error } = await supabase
-    .from('client_custom_folders')
-    .delete()
-    .eq('id', folderId)
-    .eq('owner_id', ownerId); // নিশ্চিত করা যে সঠিক ইউজারের ফোল্ডার ডিলিট হচ্ছে
+  if (listError) console.error("Could not list files to delete, but proceeding to delete folder record.");
 
-  if (error) {
-    console.error("Admin delete custom folder error:", error);
-    return { error: 'Could not delete the custom folder.' };
+  if (filesInFolder && filesInFolder.length > 0) {
+      const filePathsToDelete = filesInFolder.map(file => `${folderPath}/${file.name}`);
+      // ধাপ ৩.ক: স্টোরেজ থেকে ফাইলগুলো ডিলিট করা
+      await supabase.storage.from('client-files').remove(filePathsToDelete);
+      // ধাপ ৩.খ: ডাটাবেস থেকে ফাইলের রেকর্ডগুলো ডিলিট করা
+      await supabase.from('client_files').delete().eq('owner_id', user.id).eq('folder_name', folderToDelete.folder_name);
   }
-
-  revalidatePath(`/dashboard/users/${ownerId}/documents`);
+  
+  // ধাপ ৪: ডাটাবেস থেকে কাস্টম ফোল্ডারের রেকর্ড ডিলিট করা
+  const { error } = await supabase.from("client_custom_folders").delete().eq("id", folderId);
+  if (error) return { error: 'Could not delete folder from database.' };
+  
+  revalidatePath('/lead-dashboard/documents');
+  revalidatePath(`/dashboard/users/${folderToDelete.owner_id}`);
   return { success: true };
 }

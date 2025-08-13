@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, ChangeEvent ,useEffect} from 'react';
-import { uploadClientFile, deleteClientFile, createCustomFolder,deleteUserCustomFolderByAdmin  } from '@/app/actions/documentActions';
+import { uploadClientFile, deleteClientFile, createCustomFolder,deleteCustomFolder } from '@/app/actions/documentActions';
 
 // Create Folder Modal Component (এই ফাইলের ভেতরেই)
 const CreateFolderModal = ({ onClose, onSave }: { 
@@ -85,7 +85,7 @@ const CreateFolderModal = ({ onClose, onSave }: {
 };
 
 // একটি একক ফোল্ডার কার্ডের জন্য কম্পোনেন্ট
-const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, onDeleteSuccess, isAdminView = false }: {
+const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, onDeleteSuccess, isAdminView = false,onCustomFolderDelete  }: {
   folder: any;
   files: any[];
   clientRootPath: string;
@@ -93,6 +93,7 @@ const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, on
   onUploadSuccess: (newFiles: any[], folderName: string) => void;
   onDeleteSuccess: (fileId: number, folderName: string) => void;
   isAdminView?: boolean;
+  onCustomFolderDelete?: (folderId: number) => void;
 }) => {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -160,6 +161,26 @@ const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, on
         }
     }
   };
+
+  const handleDeleteFolder = async () => {
+    // শুধুমাত্র কাস্টম ফোল্ডার হলেই ডিলিট করা যাবে
+    if (folder.isCustom && onCustomFolderDelete) {
+        // folder.id থেকে 'custom-' অংশটি বাদ দিয়ে আসল ডেটাবেস আইডি নেওয়া হচ্ছে
+        const folderId = parseInt(folder.id.replace('custom-', ''), 10);
+        
+        if(confirm(`Are you sure you want to delete the folder "${folder.name}"? This will also delete all files inside it.`)) {
+            // সার্ভার অ্যাকশন কল করা হচ্ছে
+            const result = await deleteCustomFolder(folderId);
+
+            if (result.error) {
+                alert(`Failed to delete folder: ${result.error}`);
+            } else {
+                alert('Folder deleted successfully!');
+                onCustomFolderDelete(folderId); // UI আপডেট করার জন্য প্যারেন্টকে জানানো
+            }
+        }
+    }
+  };
   
   const iconMap: { [key: string]: { icon: string, bg: string, text: string } } = {
       'Financial': { icon: 'fa-chart-line', bg: 'bg-green-100', text: 'text-green-600' },
@@ -174,17 +195,27 @@ const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, on
   const folderStyle = iconMap[folder.name.split(' ')[0]] || iconMap['Other'];
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col relative">
       <div className="flex items-center mb-4">
         <div className={`flex items-center justify-center h-10 w-10 rounded-full ${folderStyle.bg} mr-3`}>
           <i className={`fa-solid ${folder.icon || 'fa-folder'} ${folderStyle.text}`}></i>
         </div>
+        
         <div>
           <h4 className="text-lg font-medium text-gray-900">{folder.name}</h4>
           <span className={`text-xs px-2 py-1 rounded-full ${folder.isRequired ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
             {folder.isRequired ? 'Required' : 'Optional'}
           </span>
         </div>
+        {folder.isCustom && !isAdminView && (
+            <button 
+                onClick={handleDeleteFolder} 
+                className="bg-black h-6 w-6 absolute top-2 right-2 text-white hover:text-red-600 p-1 rounded-full text-xs" 
+                title="Delete this custom folder"
+            >
+                <i className="fa-solid fa-times"></i>
+            </button>
+        )}
       </div>
       
       <p className="text-sm text-gray-500 mb-4 flex-grow">{folder.description}</p>
@@ -269,7 +300,7 @@ export default function DocumentManager({
     return grouped;
   });
 
-  const [customFolders, setCustomFolders] = useState(initialCustomFolders);
+ 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [allFolders, setAllFolders] = useState(() => {
@@ -327,7 +358,10 @@ export default function DocumentManager({
     return { error: result.error || null };
   };
 
- 
+ const handleDeleteCustomFolderSuccess = (folderId: number) => {
+        // allFolders state থেকে ডিলিট করা ফোল্ডারটি সরিয়ে দেওয়া হচ্ছে
+        setAllFolders(prev => prev.filter(f => f.id !== `custom-${folderId}`));
+    };
 
   return (
     <div id="documents-section" className={isAdminView ? '' : 'p-6'}>
@@ -355,6 +389,7 @@ export default function DocumentManager({
               onUploadSuccess={handleUploadSuccess}
               onDeleteSuccess={handleDeleteSuccess}
               isAdminView={isAdminView}
+              onCustomFolderDelete={handleDeleteCustomFolderSuccess}
             />
           ))}
            {allFolders.length === 0 && (
@@ -369,6 +404,5 @@ export default function DocumentManager({
     </div>
   );
 }
-
 
 
