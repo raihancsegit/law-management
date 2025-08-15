@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, ChangeEvent ,useEffect} from 'react';
 import { uploadClientFile, deleteClientFile, createCustomFolder,deleteCustomFolder } from '@/app/actions/documentActions';
-
+import ExpandableText from '@/components/ui/ExpandableText';
 // Create Folder Modal Component (এই ফাইলের ভেতরেই)
 const CreateFolderModal = ({ onClose, onSave }: { 
     onClose: () => void, 
@@ -218,7 +218,9 @@ const FolderCard = ({ folder, files, clientRootPath, userId, onUploadSuccess, on
         )}
       </div>
       
-      <p className="text-sm text-gray-500 mb-4 flex-grow">{folder.description}</p>
+      <div className="flex-grow mb-4">
+              <ExpandableText text={folder.description || ''} maxLength={90} />
+        </div>
       
       <div className="space-y-3">
         <button
