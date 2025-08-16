@@ -126,7 +126,7 @@ const DocumentsTab: FC<{ userId: string }> = ({ userId }) => {
                 supabase.from('client_files').select('*').eq('owner_id', userId)
             ]);
             
-             if (profileRes.data) setProfile(profileRes.data);
+            if (profileRes.data) setProfile(profileRes.data);
             if (templateRes.data) setPredefinedFolders(templateRes.data.structure); // setPredefinedFolders ব্যবহার
             if (customFoldersRes.data) setCustomFolders(customFoldersRes.data); // নতুন state সেট করা
             if (filesRes.data) setFiles(filesRes.data);

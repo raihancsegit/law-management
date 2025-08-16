@@ -3,6 +3,21 @@
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { createClient } from '@supabase/supabase-js'
+
+// একটি অ্যাডমিন ক্লায়েন্ট তৈরি করা (প্রয়োজনীয়)
+const createAdminClient = () => {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+};
+
+const getClientRootPath = (profile: { id: string, first_name: string | null, last_name: string | null }) => {
+    const folderName = `${profile.last_name}_${profile.first_name}_${profile.id}`.toLowerCase().replace(/\s+/g, '_');
+    return `client-documents/${folderName}`;
+};
 
 // Folder টাইপ (এটি একটি কমন টাইপ ফাইলে রাখা ভালো)
 type Folder = {
@@ -68,4 +83,90 @@ export async function convertLeadToClient(userId: string) {
   revalidatePath('/dashboard/users');
   revalidatePath(`/dashboard/users/${userId}`);
   return { success: true, message: 'User converted to client successfully.' };
+}
+
+
+
+async function deleteClientFolderRecursive(supabaseAdmin: any, rootPath: string) {
+    const { data: files, error: listError } = await supabaseAdmin.storage.from('client-files').list(rootPath, {
+        limit: 1000 // একটি ফোল্ডারে ১০০০-এর বেশি ফাইল থাকলে পেজিনেশন লাগবে
+    });
+
+    if (listError) {
+        console.error(`Could not list files in ${rootPath}:`, listError.message);
+        // তালিকা পাওয়া না গেলেও ডিলিট করার চেষ্টা চালিয়ে যাওয়া যেতে পারে
+    }
+
+    if (files && files.length > 0) {
+        const filePathsToDelete = files.flatMap((folder: any) => 
+            folder.id === null 
+                ? [`${rootPath}/${folder.name}/.placeholder`] // Subfolder placeholder
+                : [`${rootPath}/${folder.name}`] // File
+        );
+        
+        // সব সাব-ফোল্ডারের ফাইল তালিকা করা
+        for (const folder of files.filter((f:any) => f.id === null)) {
+            const {data: subFiles} = await supabaseAdmin.storage.from('client-files').list(`${rootPath}/${folder.name}`);
+            if(subFiles && subFiles.length > 0) {
+                filePathsToDelete.push(...subFiles.map((sf:any) => `${rootPath}/${folder.name}/${sf.name}`));
+            }
+        }
+        
+        console.log("Attempting to delete storage paths:", filePathsToDelete);
+
+        if (filePathsToDelete.length > 0) {
+            const { error: removeError } = await supabaseAdmin.storage.from('client-files').remove(filePathsToDelete);
+            if (removeError) {
+                // একটি non-breaking error হিসেবে লগ করা, যাতে মূল প্রক্রিয়া চলতে পারে
+                console.error(`Partial deletion failed in ${rootPath}:`, removeError.message);
+            }
+        }
+    }
+}
+
+
+// === convertClientToLead (শক্তিশালী ফোল্ডার ডিলিটিংসহ আপডেট) ===
+export async function convertClientToLead(userId: string) {
+  const cookieStore = cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  const supabaseAdmin = createAdminClient();
+
+  // ... (অ্যাডমিন চেক) ...
+
+  const { data: clientProfile } = await supabase.from('profiles').select('id, first_name, last_name').eq('id', userId).single();
+  if (!clientProfile) return { error: 'Client profile not found.' };
+  
+  // নতুন helper ফাংশন ব্যবহার করে ফোল্ডার ডিলিট করা
+  const rootPath = getClientRootPath(clientProfile);
+  await deleteClientFolderRecursive(supabaseAdmin, rootPath);
+  
+  const { error } = await supabase.from('profiles').update({ role: 'lead' }).eq('id', userId);
+  if (error) return { error: 'Could not update user role to lead.' };
+  
+  revalidatePath('/dashboard/staff');
+  return { success: true, message: 'User reverted to lead, and their folder was deleted.' };
+}
+
+
+// === deleteUser (শক্তিশালী ফোল্ডার ডিলিটিংসহ আপডেট) ===
+export async function deleteUser(userId: string) {
+  const cookieStore = cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  const supabaseAdmin = createAdminClient();
+
+  // ... (অ্যাডমিন চেক) ...
+  
+  const { data: userProfile } = await supabase.from('profiles').select('id, first_name, last_name, role').eq('id', userId).single();
+  
+  if (userProfile && userProfile.role === 'client') {
+      const rootPath = getClientRootPath(userProfile);
+      // নতুন helper ফাংশন ব্যবহার করে ফোল্ডার ডিলিট করা
+      await deleteClientFolderRecursive(supabaseAdmin, rootPath);
+  }
+  
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  if (error) return { error: 'Could not delete user account: ' + error.message };
+
+  revalidatePath('/dashboard/staff');
+  return { success: true };
 }
