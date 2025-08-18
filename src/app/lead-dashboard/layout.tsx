@@ -37,11 +37,21 @@ export default async function LeadDashboardLayout({ children }: { children: Reac
   // এখন এই কোয়েরিটি আর ক্যাশড ডেটা ব্যবহার করবে না
   const { data: profile } = await supabase
     .from('profiles')
-    .select('first_name, last_name, avatar_url, role')
+    .select('first_name, last_name, avatar_url, role, is_approved, is_verified')
     .eq('id', session.user.id)
     .single();
+    
+  if (!profile) {
+    // যদি ডাটাবেসে প্রোফাইল না থাকে, লগইন পেজে পাঠাও
+    return redirect('/login?error=profile_not_found');
+  }
 
-  if (!profile || (profile.role !== 'lead' && profile.role !== 'client')) {
+  if (!profile.is_approved || !profile.is_verified) {
+    return redirect('/login?error=account_access_revoked');
+  }
+  
+  // ভূমিকা অনুযায়ী পেজ অ্যাক্সেস নিয়ন্ত্রণ
+  if (profile.role !== 'lead' && profile.role !== 'client') {
     return redirect('/unauthorized');
   }
 

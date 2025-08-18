@@ -15,15 +15,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
   
   // প্রোফাইল এবং ভূমিকা চেক করার লজিক এখানে থাকতে পারে
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', session.user.id)
-    .single()
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, is_approved')
+        .eq('id', session.user.id)
+        .single();
     
-  if (profile?.role !== 'admin') {
-    return redirect('/unauthorized')
-  }
+    if (profile?.role !== 'admin') {
+      return redirect('/unauthorized')
+    }
+
+     if (!profile.is_approved) {
+        return redirect('/admin/login?error=account_deactivated');
+    }
 
   return (
     <div className="flex h-screen bg-gray-50">
