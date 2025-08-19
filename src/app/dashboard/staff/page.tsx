@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import StaffManagementClientPage from './StaffManagementClientPage';
 import { redirect } from 'next/navigation';
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 // SearchParams-এর জন্য টাইপ সংজ্ঞা যোগ করা
 type StaffPageProps = {
@@ -26,10 +26,9 @@ export default async function StaffManagementPage({ searchParams }: StaffPagePro
   }
 
   // ক্লায়েন্ট ও লিড টেবিলের জন্য URL থেকে প্যারামিটারগুলো নেওয়া
- const page = parseInt(searchParams.page || '1', 10);
+  const page = parseInt(searchParams.page || '1', 10);
   const searchTerm = searchParams.q || '';
-  const roleFilter = searchParams.role || 'all';
-  
+  const roleFilter = searchParams.role || 'all'; 
   // --- নতুন পরিবর্তন: উভয় RPC ফাংশনকে Promise.all দিয়ে একসাথে কল করা হচ্ছে ---
    const [staffResponse, clientsLeadsResponse] = await Promise.all([
     supabase.rpc('get_system_staff'),

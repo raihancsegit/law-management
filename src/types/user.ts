@@ -13,3 +13,20 @@ export type UserProfile = {
   avatar_url: string | null;
   internal_notes: string | null;
 }
+
+export type Folder = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  isRequired: boolean;
+  isCustom?: boolean;
+  children?: Folder[];
+};
+
+export type FormField = {
+    id: number;
+    label: string;
+    field_type: string;
+    // ... অন্যান্য প্রপার্টি
+};

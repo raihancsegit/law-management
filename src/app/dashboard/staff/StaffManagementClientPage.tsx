@@ -285,7 +285,7 @@ export default function StaffManagementClientPage({ initialStaff, initialClients
                           className="pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-law-blue"/>
                         <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     </div>
-                    <select onChange={handleFilterChange} defaultValue={searchParams.role || 'all'} className="text-sm border border-gray-300 rounded-lg">
+                    <select onChange={handleFilterChange} defaultValue={searchParams.role || 'all'} className="px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-law-blue focus:border-transparent">
                         <option value="all">All Types</option>
                         <option value="client">Client</option>
                         <option value="lead">Lead</option>

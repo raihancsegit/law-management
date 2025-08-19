@@ -6,7 +6,8 @@ import { StrictModeDroppable } from '@/components/dnd/StrictModeDroppable';
 import { updateFolderTemplate } from '@/app/actions/folderActions';
 import FolderModal from './FolderModal';
 
-// ফোল্ডারের টাইপ সংজ্ঞা
+
+//ফোল্ডারের টাইপ সংজ্ঞা
 type Folder = {
   id: string;
   name: string;
