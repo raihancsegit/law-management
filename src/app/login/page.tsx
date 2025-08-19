@@ -1,25 +1,47 @@
-// src/app/login/page.tsx
 'use client';
+
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react'; // useState ইম্পোর্ট করা হয়েছে
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import type { SupabaseClient } from '@supabase/supabase-js'; // টাইপ ইম্পোর্ট করা হয়েছে
 
 export default function ClientLoginPage() {
-  const supabase = createClientComponentClient();
   const router = useRouter();
 
+  // supabase ক্লায়েন্টটিকে state-এ রাখা হচ্ছে, প্রাথমিক মান null
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // createClientComponentClient শুধুমাত্র useEffect-এর ভেতরে কল করা হচ্ছে,
+    // যা নিশ্চিত করে এটি শুধু ব্রাউজারে রান হবে, বিল্ড টাইমে নয়।
+    const supabaseClient = createClientComponentClient();
+    setSupabase(supabaseClient);
+
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        // এই পেজটি ক্লায়েন্ট/লিডদের জন্য, তাই lead-dashboard-এ পাঠাও
+        // ক্লায়েন্ট/লিডদের জন্য lead-dashboard-এ পাঠানো হচ্ছে
         router.push('/lead-dashboard');
       }
     });
-    return () => subscription.unsubscribe();
-  }, [supabase, router]);
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [router]);
+
+  // supabase লোড না হওয়া পর্যন্ত একটি লোডিং স্টেট দেখানো হচ্ছে
+  if (!supabase) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md text-center">
+            Loading Portal...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -30,30 +52,21 @@ export default function ClientLoginPage() {
           supabaseClient={supabase}
           appearance={{ theme: ThemeSupa }}
           view="sign_in"
-          showLinks={true} // "Forgot password?" লিঙ্ক দেখানোর জন্য
+          showLinks={true}
           providers={[]}
-          
-          // ========================================================
-          // == এই অংশটি যোগ করা হয়েছে ==
-          // ========================================================
           localization={{
             variables: {
               sign_in: {
-                // "Don't have an account?" টেক্সট পরিবর্তন বা লুকানোর জন্য
-                // আমরা এখানে একটি খালি স্পেস দিচ্ছি, যা এটিকে কার্যকরভাবে লুকিয়ে ফেলবে
+                // সাইন-আপ লিঙ্ক লুকিয়ে ফেলার জন্য
                 social_provider_text: ' ', 
               },
-              // যদি আপনি "Sign up" টেক্সটটিও পুরোপুরি সরাতে চান (যদিও view="sign_in" এটি লুকানোর কথা)
-              sign_up: {
-                link_text: '', // এটি অপ্রয়োজনীয় হতে পারে, কিন্তু নিশ্চিত করার জন্য যোগ করা হলো
-              }
             },
           }}
-          // ========================================================
         />
-        <div className="text-center">
+        
+        <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-           {'Don\'t have an account? '}{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/start-application" className="font-medium text-law-blue hover:text-blue-700">
               Start Your Application
             </Link>
