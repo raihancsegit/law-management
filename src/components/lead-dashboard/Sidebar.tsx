@@ -19,7 +19,7 @@ const NavItem = ({ href, icon, label, pathname }: {
   label: string, 
   pathname: string 
 }) => {
-  const isActive = pathname.startsWith(href); // startsWith ব্যবহার করলে সাব-রুটও অ্যাক্টিভ দেখাবে
+  const isActive = pathname === href; // startsWith ব্যবহার করলে সাব-রুটও অ্যাক্টিভ দেখাবে
 
   return (
     <li>

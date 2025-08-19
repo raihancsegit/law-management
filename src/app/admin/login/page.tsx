@@ -42,7 +42,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="login-page-container flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md">
         <h2 className="text-center text-2xl font-bold mb-6">Admin & Staff Portal</h2>
         <Auth
@@ -52,6 +52,14 @@ export default function AdminLoginPage() {
           view="sign_in"
           showLinks={true} // "Forgot password?" দেখানোর জন্য
           providers={[]} // সোশ্যাল প্রোভাইডার দেখানো হবে না
+          localization={{
+            variables: {
+              sign_in: {
+                // সাইন-আপ লিঙ্ক লুকিয়ে ফেলার জন্য
+                social_provider_text: ' ', 
+              },
+            },
+          }}
         />
       </div>
     </div>

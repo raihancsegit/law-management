@@ -44,7 +44,7 @@ export default function ClientLoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="login-page-container flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md">
         <h2 className="text-center text-2xl font-bold mb-6">Client Portal Login</h2>
         
@@ -62,6 +62,7 @@ export default function ClientLoginPage() {
               },
             },
           }}
+
         />
         
         <div className="mt-6 text-center">

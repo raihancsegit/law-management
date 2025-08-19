@@ -148,6 +148,82 @@ const SubmittedState = () => (
   </section>
 );
 
+const StatCard = ({ title, value, icon, bg, text }: any) => (
+  <div className={`bg-white rounded-lg border-gray-200 shadow-sm border p-6 text-center ${bg}`}>
+      <div className={`h-12 w-12 rounded-full ${bg} flex items-center justify-center mx-auto mb-3`}>
+        <i className={`fa-solid ${icon} ${text} text-xl`}></i>
+      </div>
+      <p className="text-sm font-medium text-gray-600">{title}</p>
+      <p className="text-lg font-semibold text-gray-900">{value}</p>
+  </div>
+);
+
+const WorkflowStep = ({ step, title, status, description, buttonText, buttonLink, inProgressValue, isLocked = false }: any) => {
+    const statusStyles: { [key:string]: any } = {
+        Completed: { icon: 'fa-check', bg: 'bg-green-100', text: 'text-green-800' },
+        'In Progress': { icon: 'fa-clock', bg: 'bg-amber-100', text: 'text-amber-800' },
+        Ready: { icon: step, bg: 'bg-blue-100', text: 'text-law-blue' },
+        Locked: { icon: 'fa-lock', bg: 'bg-gray-100', text: 'text-gray-400' },
+    };
+    const currentStatus = statusStyles[status];
+
+    return (
+        <div className={`bg-white border-gray-200 rounded-lg shadow-sm border overflow-hidden ${isLocked ? 'opacity-60' : ''}`}>
+            <div className="p-6">
+                <div className="flex items-start">
+                    <div className={`flex-shrink-0 h-12 w-12 rounded-full flex items-center justify-center ${currentStatus.bg}`}>
+                       <i className={`fa-solid ${currentStatus.icon} text-xl ${status === 'Ready' ? 'hidden' : ''}`}></i>
+                       {status === 'Ready' && <span className={`font-bold text-lg ${currentStatus.text}`}>{step}</span>}
+                    </div>
+                    <div className="ml-4 flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-xl font-semibold text-gray-900">{title}</h4>
+                            <span className={`text-xs px-3 py-1 rounded-full font-medium ${currentStatus.bg} ${currentStatus.text}`}>{status}</span>
+                        </div>
+                        <p className="text-gray-500 mb-4">{description}</p>
+                        {!isLocked && buttonText && (
+                             <Link href={buttonLink} className="inline-flex items-center px-4 py-2 bg-law-blue text-white rounded-lg">
+                                <i className="fa-solid fa-arrow-right mr-2"></i> {buttonText}
+                            </Link>
+                        )}
+                        {inProgressValue && (
+                             <p className="text-sm text-law-blue font-medium mt-2">{inProgressValue}</p>
+                        )}
+                        {isLocked && <p className="text-sm italic text-gray-500">Complete previous steps to unlock.</p>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// === নতুন ক্লায়েন্ট ড্যাশবোর্ড কম্পোনেন্ট ===
+const ClientDashboard = ({ profile }: { profile: any }) => (
+    <div id="dashboard-section" className="p-6">
+        <div className="max-w-6xl mx-auto">
+            <div className="mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Welcome back, {profile.first_name}!</h3>
+                <p className="text-gray-500">Complete your bankruptcy case in 4 simple steps</p>
+            </div>
+
+            {/* Step-by-Step Workflow */}
+            <div className="space-y-6">
+                <WorkflowStep step="1" title="Critical Information & Rules" status="Completed" description="..." buttonText="View Detailed Information" buttonLink="#" />
+                <WorkflowStep step="2" title="Upload Required Documents" status="In Progress" description="..." buttonText="Continue Upload" buttonLink="/lead-dashboard/documents" inProgressValue="8 of 12 uploaded"/>
+                <WorkflowStep step="3" title="Complete Financial Questionnaire" status="Ready" description="..." buttonText="Continue Questionnaire" buttonLink="/lead-dashboard/financials" inProgressValue="2 of 7 sections completed"/>
+                <WorkflowStep step="4" title="Review & Submit Case" status="Locked" description="..." isLocked={true} />
+            </div>
+
+            {/* Quick Stats */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard title="Case Status" value="Active & Ready" icon="fa-gavel" bg="bg-green-100" text="text-green-600" />
+                <StatCard title="Next Appointment" value="Jan 28, 2025" icon="fa-calendar" bg="bg-blue-100" text="text-law-blue" />
+                <StatCard title="New Messages" value="3 Unread" icon="fa-envelope" bg="bg-purple-100" text="text-purple-600" />
+            </div>
+        </div>
+    </div>
+);
 
 // --- মূল পেজ কম্পোনেন্ট ---
 export default async function LeadDashboardPage() {
@@ -155,33 +231,33 @@ export default async function LeadDashboardPage() {
   const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return redirect('/login');
 
-  if (!user) {
-    return redirect('/login');
-  }
-
-  // ব্যবহারকারীর প্রোফাইল এবং অ্যাপ্লিকেশন স্ট্যাটাস আনা
-  const { data: leadData, error } = await supabase
+  const { data: profile, error } = await supabase
     .from('profiles')
-    .select(`
-      first_name,
-      form_submissions (
-        status,
-        current_step
-      )
-    `)
+    .select(`*, form_submissions (status, current_step)`) // `*` দিয়ে সব কলাম আনা হচ্ছে
     .eq('id', user.id)
     .single();
 
-  if (error && error.code !== 'PGRST116') { // PGRST116 মানে কোনো রো পাওয়া যায়নি, যা একটি বৈধ সিনারিও
-    console.error('Lead dashboard error:', error.message);
-    return <div>Error loading dashboard. Please try again.</div>;
+  if (error && error.code !== 'PGRST116') {
+    console.error('Dashboard error:', error.message);
+    return <div>Error loading dashboard.</div>;
+  }
+
+  if (!profile) {
+    return redirect('/login?error=profile_not_found');
+  }
+
+  // --- ভূমিকা-ভিত্তিক রেন্ডারিং ---
+  if (profile.role === 'client') {
+    return <ClientDashboard profile={profile} />;
   }
   
-  const submission = leadData && Array.isArray(leadData.form_submissions) ? leadData.form_submissions[0] : null;
+  // --- লিডদের জন্য আপনার বিদ্যমান লজিক ---
+  const submission = Array.isArray(profile.form_submissions) ? profile.form_submissions[0] : null;
   const applicationStatus = submission?.status || 'initial';
-  const progress = submission ? Math.round((submission.current_step / 4) * 100) : 0; // মোট ৪ ধাপ
-
+  const progress = submission ? Math.round((submission.current_step / 4) * 100) : 0;
+  
   const renderContent = () => {
     switch (applicationStatus) {
       case 'in_progress':
@@ -195,17 +271,12 @@ export default async function LeadDashboardPage() {
   };
 
   return (
-    <div id="dashboard-section" className="section-content p-6">
+    <div className="section-content p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">
-            Welcome to Your Dashboard, {leadData?.first_name || 'User'}!
-          </h3>
-          <p className="text-gray-500">
-            Manage your bankruptcy case with Cohen & Cohen P.C.
-          </p>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Your Dashboard, {profile.first_name || 'User'}!</h3>
+          <p className="text-gray-500">Manage your bankruptcy case with Cohen & Cohen P.C.</p>
         </div>
-        
         {renderContent()}
       </div>
     </div>

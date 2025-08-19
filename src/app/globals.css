@@ -75,3 +75,18 @@ body {
     --tw-border-opacity: 1;
     border-color: rgb(254 240 138 / var(--tw-border-opacity, 1));
 }
+
+.login-page-container .supabase-auth-ui_ui-message {
+    display: none !important;
+}
+
+/* 
+ * Supabase-এর পুরানো ভার্সনের জন্য একটি ফলব্যাক 
+ * (যদি উপরেরটি কাজ না করে, এটি করবে) 
+ */
+.login-page-container a[href="#auth-sign-up"] {
+    display: none !important;
+}
+.login-page-container a[href="#auth-sign-up"] + span {
+    display: none !important;
+}
