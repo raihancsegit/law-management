@@ -1,9 +1,19 @@
-// src/lib/supabase/client.ts
-import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
-import type { Database } from '@/types/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Database } from '@/types/supabase';
 
-// আগের কোডে, আমরা একটি ভেরিয়েবল এক্সপোর্ট করেছিলাম।
-// export const supabase = createPagesBrowserClient<Database>()
+// ক্লায়েন্টের একটি সিঙ্গলটন (singleton) ইনস্ট্যান্স রাখা হবে
+let supabaseClient: ReturnType<typeof createClientComponentClient<Database>> | undefined;
 
-// নতুন এবং সঠিক কোড: আমরা একটি ফাংশন এক্সপোর্ট করব।
-export const createClient = () => createPagesBrowserClient<Database>()
+function getSupabaseBrowserClient() {
+  // যদি ক্লায়েন্ট আগে থেকেই তৈরি করা থাকে, সেটিকেই রিটার্ন করা হবে
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+  
+  // ক্লায়েন্টটি শুধুমাত্র প্রথমবার কল হওয়ার সময়ই তৈরি হবে
+  supabaseClient = createClientComponentClient<Database>();
+  
+  return supabaseClient;
+}
+
+export default getSupabaseBrowserClient;

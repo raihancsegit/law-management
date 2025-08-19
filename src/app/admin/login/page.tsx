@@ -2,12 +2,12 @@
 'use client'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { createClient } from '@/lib/supabase/client' // client.ts থেকে
+import  getSupabaseBrowserClient   from '@/lib/supabase/client' // client.ts থেকে
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
-  const supabase = createClient()
+  const supabase = getSupabaseBrowserClient ()
   const router = useRouter()
 
   useEffect(() => {

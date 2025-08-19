@@ -14,31 +14,10 @@ export default function ClientLoginPage() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        // === পরিবর্তন: লগইন সফল হওয়ার পর প্রোফাইল চেক ===
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('is_approved, is_verified') // is_approved এবং is_verified চেক করা হচ্ছে
-          .eq('id', session.user.id)
-          .single();
-
-        if (error || !profile) {
-          await supabase.auth.signOut(); // সেশন ধ্বংস করে দেওয়া হচ্ছে
-          router.push('/login?error=profile_not_found');
-          return;
-        }
-
-        // যদি ভেরিফাইড বা অ্যাপ্রুভড না হয়, তাহলে সাইন-আউট করে দেওয়া
-        if (!profile.is_approved || !profile.is_verified) {
-          await supabase.auth.signOut();
-          const reason = !profile.is_approved ? 'account_deactivated' : 'account_not_verified';
-          router.push(`/login?error=${reason}`);
-        } else {
-          // সবকিছু ঠিক থাকলে ড্যাশবোর্ডে পাঠানো
-          router.push('/lead-dashboard');
-        }
+        // এই পেজটি ক্লায়েন্ট/লিডদের জন্য, তাই lead-dashboard-এ পাঠাও
+        router.push('/lead-dashboard');
       }
     });
-
     return () => subscription.unsubscribe();
   }, [supabase, router]);
 

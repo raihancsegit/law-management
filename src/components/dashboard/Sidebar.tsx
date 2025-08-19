@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import  getSupabaseBrowserClient   from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { handleSignOut } from '@/app/actions/authActions';
 
@@ -64,7 +64,7 @@ const NavLink = ({ href, icon, label, isCollapsed, pathname }: NavLinkComponentP
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = getSupabaseBrowserClient()
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   const toggleSidebar = () => {
