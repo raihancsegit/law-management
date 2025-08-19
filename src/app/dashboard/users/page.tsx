@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase/admin' 
 import UserManagement from '@/components/dashboard/UserManagement'
 import type { UserProfile } from '@/types/user'
-
+export const dynamic = 'force-dynamic';
 // Helper ফাংশনটি এখন supabaseAdmin ব্যবহার করবে
 async function getUserEmailMap() {
   // createClient() এর পরিবর্তে সরাসরি supabaseAdmin ব্যবহার করুন
