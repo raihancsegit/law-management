@@ -2,15 +2,15 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
 // নতুন অ্যাডমিন ক্লায়েন্ট ইম্পোর্ট করুন
-import { supabaseAdmin } from '@/lib/supabase/admin' 
+import { getSupabaseAdmin  } from '@/lib/supabase/admin' 
 import UserManagement from '@/components/dashboard/UserManagement'
 import type { UserProfile } from '@/types/user'
 export const dynamic = 'force-dynamic';
 // Helper ফাংশনটি এখন supabaseAdmin ব্যবহার করবে
 async function getUserEmailMap() {
   // createClient() এর পরিবর্তে সরাসরি supabaseAdmin ব্যবহার করুন
-  const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers()
-  
+ const supabaseAdmin = getSupabaseAdmin();
+  const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
   if (error) {
     // এররটি এখন আরও তথ্যবহুল হবে
     console.error("Error fetching user list from auth admin API:", error.message)

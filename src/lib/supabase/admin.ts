@@ -1,21 +1,18 @@
-// src/lib/supabase/admin.ts
-import { createClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/supabase'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-// এই ক্লায়েন্টটি শুধুমাত্র সার্ভার-সাইড অ্যাডমিন কাজের জন্য ব্যবহার হবে
-// এটি service_role key ব্যবহার করবে এবং RLS পলিসি বাইপাস করবে
+let supabaseAdmin: SupabaseClient | undefined;
 
-// নিশ্চিত করুন যে আপনার .env.local ফাইলে এই ভেরিয়েবলগুলো আছে
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-export const supabaseAdmin = createClient<Database>(
-  supabaseUrl,
-  supabaseServiceRoleKey,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+export const getSupabaseAdmin = () => {
+  if (supabaseAdmin) {
+    return supabaseAdmin;
   }
-)
+
+  // createClient শুধুমাত্র তখনই কল হবে যখন getSupabaseAdmin প্রথমবার কল করা হবে।
+  supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  
+  return supabaseAdmin;
+};
