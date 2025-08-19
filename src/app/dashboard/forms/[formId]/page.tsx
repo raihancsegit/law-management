@@ -8,13 +8,15 @@ import DeleteFieldButton from '@/components/forms/DeleteFieldButton';
 
 export const revalidate = 0;
 
-type FormFieldsPageProps = {
-  params: {
-    formId: string;
-  };
-};
+// type FormFieldsPageProps = {
+//   params: {
+//     formId: string;
+//   };
+// };
 
-export default async function FormFieldsPage({ params }: FormFieldsPageProps) {
+export default async function FormFieldsPage({ params }: {
+  params: { formId: string }
+}) {
   const formId = parseInt(params.formId, 10);
   const cookieStore = cookies();
   const supabase = createServerComponentClient({ cookies: () => cookieStore });
@@ -70,7 +72,7 @@ export default async function FormFieldsPage({ params }: FormFieldsPageProps) {
                 <td className="px-6 py-4">{field.is_required ? 'Yes' : 'No'}</td>
                 <td className="px-6 py-4 text-right flex justify-end space-x-2">
                   <EditFieldButton field={field} />
-                  <DeleteFieldButton fieldId={field.id} />
+                  <DeleteFieldButton fieldId={field.id} formId={formId}/>
                 </td>
               </tr>
             ))}
