@@ -5,18 +5,33 @@ import Link from 'next/link';
 import AddFieldButton from '@/components/forms/AddFieldButton';
 import EditFieldButton from '@/components/forms/EditFieldButton';
 import DeleteFieldButton from '@/components/forms/DeleteFieldButton';
-
+import type { Metadata, ResolvingMetadata } from 'next';
 export const revalidate = 0;
 
-// type FormFieldsPageProps = {
-//   params: {
-//     formId: string;
-//   };
-// };
+// === পরিবর্তন ২: Props-এর জন্য একটি নতুন, শক্তিশালী টাইপ 정의 করা ===
+type Props = {
+  params: { formId: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+};
 
-export default async function FormFieldsPage({ params }: {
-  params: { formId: string }
-}) {
+// === পরিবর্তন ৩ (ঐচ্ছিক কিন্তু সেরা অভ্যাস): ডাইনামিক মেটাডেটা ===
+// এই ফাংশনটি সার্ভারে পেজের <title> ট্যাগ সেট করে।
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const formId = parseInt(params.formId, 10);
+  const cookieStore = cookies();
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+
+  const { data: form } = await supabase.from('forms').select('name').eq('id', formId).single();
+
+  return {
+    title: `${form?.name || 'Form'} Fields | Admin Dashboard`,
+  };
+}
+
+export default async function FormFieldsPage({ params }: Props) {
   const formId = parseInt(params.formId, 10);
   const cookieStore = cookies();
   const supabase = createServerComponentClient({ cookies: () => cookieStore });
