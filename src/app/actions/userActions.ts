@@ -170,3 +170,25 @@ export async function deleteUser(userId: string) {
   revalidatePath('/dashboard/staff');
   return { success: true };
 }
+
+export async function saveFinancialsProgress(submissionData: any) {
+    const supabase = createServerActionClient({ cookies: () => cookies() });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Not authenticated.' };
+
+    const { error } = await supabase
+        .from('form_submissions')
+        .upsert({
+            user_id: user.id,
+            form_id: 2, // Financial Questionnaire-এর আইডি
+            submission_data: submissionData
+        }, { onConflict: 'user_id, form_id' }); // user_id এবং form_id মিলে গেলে আপডেট করবে
+
+    if (error) {
+        console.error('Save Financials Error:', error);
+        return { error: 'Could not save progress.' };
+    }
+
+    revalidatePath('/lead-dashboard/financials');
+    return { success: true };
+}

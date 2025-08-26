@@ -55,7 +55,7 @@ export default async function FinancialsPage() {
     
     // হার্ডকোডেড সেকশনের তালিকা
     const sections = [
-        { number: 1, title: 'Personal Information', description: 'Basic personal and contact information', link: '/financials/1' },
+        { number: 1, title: 'Personal Information', description: 'Basic personal and contact information', link: '/lead-dashboard/financials/1' },
         { number: 2, title: 'Employment & Income', description: 'Current and past employment, income sources', link: '/financials/2' },
         { number: 3, title: 'Assets & Property', description: 'Real estate, vehicles, personal property, investments', link: '/financials/3' },
         { number: 4, title: 'Monthly Expenses', description: 'Housing, utilities, food, transportation, and other expenses', link: '/financials/4' },
