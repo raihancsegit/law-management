@@ -90,3 +90,7 @@ body {
 .login-page-container a[href="#auth-sign-up"] + span {
     display: none !important;
 }
+
+.text-law-blue {
+  color:#1e3a8a;
+}

@@ -179,6 +179,70 @@ const VehicleEntry = ({ entry, index, onUpdate, onRemove }: {
         </div>
     );
 };
+
+const PropertyItem = ({ title, name, formData, handleChange }: {
+    title: string;
+    name: string;
+    formData: any;
+    handleChange: (name: string, value: string | boolean, type?: string) => void;
+}) => {
+    // 'yes'/'no'-এর উপর ভিত্তি করে কন্ডিশনাল UI দেখানো
+    const hasProperty = formData[`has_${name}`] === 'yes';
+
+    // একটি জেনেরিক চেঞ্জ হ্যান্ডলার
+    const onInputChange = (e: ChangeEvent<any>) => {
+        handleChange(e.target.name, e.target.value);
+    };
+    
+    // রেডিও বাটনের জন্য ডেডিকেটেড হ্যান্ডলার
+    const onRadioChange = (value: string) => {
+        handleChange(`has_${name}`, value);
+    };
+
+    return (
+        <div className="property-item p-4 bg-white rounded-lg border border-purple-300">
+            <h3 className="text-lg font-medium text-gray-800 mb-4">{title}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Do you own this type of property?</label>
+                    <div className="flex space-x-4">
+                        <label className="flex items-center text-sm">
+                            <input type="radio" name={`has_${name}`} value="no" checked={formData[`has_${name}`] === 'no' || !formData[`has_${name}`]} onChange={() => onRadioChange('no')} />
+                            <span className="ml-2">No</span>
+                        </label>
+                        <label className="flex items-center text-sm">
+                            <input type="radio" name={`has_${name}`} value="yes" checked={formData[`has_${name}`] === 'yes'} onChange={() => onRadioChange('yes')} />
+                            <span className="ml-2">Yes</span>
+                        </label>
+                    </div>
+                </div>
+                {hasProperty && (
+                    <div className="md:col-span-2">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <TextareaField label="Description" name={`${name}_description`} value={formData[`${name}_description`] || ''} onChange={onInputChange} rows={3} />
+                            </div>
+                            <div>
+                                <InputField label="Value of Property" name={`${name}_value`} type="number" step="0.01" value={formData[`${name}_value`] || ''} onChange={onInputChange} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Owned by</label>
+                                <div className="space-y-1">
+                                    <label className="flex items-center text-sm"><input type="radio" name={`${name}_owner`} value="you" checked={formData[`${name}_owner`] === 'you'} onChange={onInputChange} className='mr-2'/> You</label>
+                                    <label className="flex items-center text-sm"><input type="radio" name={`${name}_owner`} value="spouse" checked={formData[`${name}_owner`] === 'spouse'} onChange={onInputChange} className='mr-2'/> Spouse</label>
+                                    <label className="flex items-center text-sm"><input type="radio" name={`${name}_owner`} value="joint" checked={formData[`${name}_owner`] === 'joint'} onChange={onInputChange} className='mr-2'/> Joint</label>
+                                    <label className="flex items-center text-sm"><input type="radio" name={`${name}_owner`} value="other" checked={formData[`${name}_owner`] === 'other'} onChange={onInputChange} className='mr-2'/> Other</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+
 // === মূল Section2 কম্পোনেন্ট ===
 export default function Section2({ formData, setFormData }: SectionProps) {
     const realEstate = formData.realEstate || [];
@@ -225,6 +289,26 @@ export default function Section2({ formData, setFormData }: SectionProps) {
         setFormData({...formData, noVehicles: e.target.checked, vehicles: e.target.checked ? [] : (vehicles.length === 0 ? [{id: Date.now()}] : vehicles) });
     };
 
+
+     const handleFormChange = (name: string, value: string | boolean) => {
+        setFormData(prevData => ({
+            ...prevData,
+            [name]: value,
+        }));
+    };
+
+    const properties = [
+        { name: 'householdGoods', title: 'Household Goods and Furnishings' },
+        { name: 'electronics', title: 'Electronics' },
+        { name: 'collectibles', title: 'Collectibles of value' },
+        { name: 'sportsEquipment', title: 'Sports, photo, exercise, and other hobby equipment' },
+        { name: 'firearms', title: 'Firearms, ammunition, and related equipment' },
+        { name: 'clothing', title: 'Clothing' },
+        { name: 'jewelry', title: 'Jewelry' },
+        { name: 'pets', title: 'Pets/non-farm animals' },
+        { name: 'healthAids', title: 'Health aids and all other household items not listed' }
+    ];
+
     return (
         <div>
              <div className="mb-8">
@@ -269,7 +353,7 @@ export default function Section2({ formData, setFormData }: SectionProps) {
             </div>
 
             <div id="vehicles-section" className="mb-12 p-6 bg-blue-50 rounded-lg border border-blue-200">
-                <h2 className="text-xl ... mb-6"><i className="fa-solid fa-car mr-2 ..."></i>Part B. Vehicles</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-6"><i className="fa-solid fa-car mr-2 text-law-blue"></i>Part B. Cars, Vans, Trucks, Tractors, SUVs, Motorcycles, RVs, Watercraft, Aircraft, Motor Homes, ATVs, Other Vehicles</h2>
 
                 <div className="mb-4">
                     <label className="flex items-center">
@@ -296,6 +380,22 @@ export default function Section2({ formData, setFormData }: SectionProps) {
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* --- Part C: Personal and Household Items (নতুন সেকশন) --- */}
+            <div id="partC" className="p-6 bg-purple-50 rounded-lg border border-purple-200">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6"><i className="fa-solid fa-box mr-2 text-law-blue"></i>Part C. Personal and Household Items</h2>
+                <div className="space-y-6">
+                     {properties.map(prop => (
+                        <PropertyItem
+                            key={prop.name}
+                            title={prop.title}
+                            name={prop.name}
+                            formData={formData}
+                            handleChange={handleFormChange}
+                        />
+                    ))}
+                </div>
             </div>
         </div>
     );
