@@ -56,12 +56,12 @@ export default async function FinancialsPage() {
     // হার্ডকোডেড সেকশনের তালিকা
     const sections = [
         { number: 1, title: 'Personal Information', description: 'Basic personal and contact information', link: '/lead-dashboard/financials/1' },
-        { number: 2, title: 'Employment & Income', description: 'Current and past employment, income sources', link: '/financials/2' },
-        { number: 3, title: 'Assets & Property', description: 'Real estate, vehicles, personal property, investments', link: '/financials/3' },
-        { number: 4, title: 'Monthly Expenses', description: 'Housing, utilities, food, transportation, and other expenses', link: '/financials/4' },
-        { number: 5, title: 'Debts & Liabilities', description: 'Credit cards, loans, and other debts', link: '/financials/5' },
-        { number: 6, title: 'Financial History', description: 'Previous bankruptcy filings and financial transactions', link: '/financials/6' },
-        { number: 7, title: 'Legal & Additional Information', description: 'Legal matters, pending lawsuits, and additional disclosures', link: '/financials/7' }
+        { number: 2, title: 'Employment & Income', description: 'Current and past employment, income sources', link: '/lead-dashboard/financials/2' },
+        { number: 3, title: 'Assets & Property', description: 'Real estate, vehicles, personal property, investments', link: '/lead-dashboard/financials/3' },
+        { number: 4, title: 'Monthly Expenses', description: 'Housing, utilities, food, transportation, and other expenses', link: '/lead-dashboard/financials/4' },
+        { number: 5, title: 'Debts & Liabilities', description: 'Credit cards, loans, and other debts', link: '/lead-dashboard/financials/5' },
+        { number: 6, title: 'Financial History', description: 'Previous bankruptcy filings and financial transactions', link: '/lead-dashboard/financials/6' },
+        { number: 7, title: 'Legal & Additional Information', description: 'Legal matters, pending lawsuits, and additional disclosures', link: '/lead-dashboard/financials/7' }
     ];
 
     // TODO: প্রতিটি সেকশনের জন্য স্ট্যাটাস এবং অগ্রগতি গণনা করার লজিক এখানে যোগ করতে হবে।
