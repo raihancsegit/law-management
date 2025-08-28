@@ -8,6 +8,7 @@ import { saveFinancialsProgress } from '@/app/actions/userActions';
 // সেকশন কম্পונન્ટগুলোকে ইম্পোর্ট করা
 import Section1 from '@/components/financials/Section1';
 import Section2 from '@/components/financials/Section2'; 
+import Section3 from '@/components/financials/Section3';
 // import Section2 from '@/components/financials/Section2'; // ভবিষ্যতের জন্য
 
 type Props = {
@@ -63,6 +64,7 @@ export default function QuestionnaireSectionClient({ sectionNumber, initialData 
     const sections = useMemo(() => ({
         1: <Section1 formData={formData} handleChange={handleChange} handleSsnChange={handleSsnChange} />,
         2: <Section2 formData={formData} setFormData={setFormData} />,
+        3: <Section3 formData={formData} setFormData={setFormData} />
         // 2: <Section2 formData={formData} handleChange={handleChange} />,
     }), [formData]); // formData-এর উপর নির্ভর করে, যাতে চাইল্ড কম্পוננט রি-রেন্ডার হয়
 

@@ -94,3 +94,42 @@ body {
 .text-law-blue {
   color:#1e3a8a;
 }
+
+.bg-blue-600 {
+  background-color: #2563eb;
+}
+.bg-purple-600 {
+  background-color: #9333ea;
+}
+
+.bg-amber-600 {
+  background-color: #d97706;
+}
+.bg-indigo-600 {
+  background-color: #4f46e5;
+}
+.bg-indigo-50 {
+  background-color: #eef2ff;
+}
+
+.border-blue-200 {
+  border-color:#bfdbfe;
+}
+.border-purple-300 {
+    border-color:#d8b4fe;
+}
+.border-indigo-300 {
+  border-color:#a5b4fc;
+}
+.border-red-300 {
+    border-color:#fca5a5;
+}
+.border-blue-300 {
+  border-color:#93c5fd;
+}
+.border-amber-300 {
+  border-color:#fcd34d;
+}
+.border-indigo-200 {
+  border-color:#c7d2fe;
+}

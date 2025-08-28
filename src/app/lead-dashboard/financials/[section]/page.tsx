@@ -32,8 +32,8 @@ export default async function FinancialsSectionPage({ params }: {
     
     return (
         <div className="p-6">
-            <div className="max-w-4xl mx-auto">
-                <div className="bg-white rounded-lg shadow-sm border p-8">
+            <div className="max-w-5xl mx-auto">
+                <div className="bg-white rounded-lg shadow-sm border p-8 border-gray-200">
                     <QuestionnaireSectionClient
                         sectionNumber={sectionNumber}
                         initialData={initialData}

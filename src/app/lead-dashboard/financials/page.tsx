@@ -77,7 +77,7 @@ export default async function FinancialsPage() {
 
     return (
         <div className="p-6">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-5xl mx-auto">
                 <div className="mb-6">
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">Financial Questionnaire</h3>
                     <p className="text-gray-500">Complete this comprehensive form to help us prepare your bankruptcy case.</p>
