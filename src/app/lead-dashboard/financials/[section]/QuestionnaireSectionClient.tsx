@@ -11,6 +11,8 @@ import Section2 from '@/components/financials/Section2';
 import Section3 from '@/components/financials/Section3';
 import Section4 from '@/components/financials/Section4';
 import Section5 from '@/components/financials/Section5';
+import Section6 from '@/components/financials/Section6';
+import Section7 from '@/components/financials/Section7';
 // import Section2 from '@/components/financials/Section2'; // ভবিষ্যতের জন্য
 
 type Props = {
@@ -68,8 +70,9 @@ export default function QuestionnaireSectionClient({ sectionNumber, initialData 
         2: <Section2 formData={formData} setFormData={setFormData} />,
         3: <Section3 formData={formData} setFormData={setFormData} />,
         4: <Section4 formData={formData} setFormData={setFormData} />,
-        5: <Section5 formData={formData} setFormData={setFormData} />
-        // 2: <Section2 formData={formData} handleChange={handleChange} />,
+        5: <Section5 formData={formData} setFormData={setFormData} />,
+        6: <Section6 formData={formData} setFormData={setFormData} />,
+        7: <Section7 formData={formData} setFormData={setFormData} />
     }), [formData]); // formData-এর উপর নির্ভর করে, যাতে চাইল্ড কম্পוננט রি-রেন্ডার হয়
 
     const CurrentSectionComponent = sections[sectionNumber as keyof typeof sections] || <div>Section Not Implemented Yet.</div>;

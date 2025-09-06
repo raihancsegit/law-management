@@ -133,3 +133,29 @@ body {
 .border-indigo-200 {
   border-color:#c7d2fe;
 }
+
+.bg-red-600 {
+  background-color: #dc2626;
+}
+
+.bg-orange-600 {
+  background-color: #ea580c;
+}
+
+.bg-pink-600 {
+  background-color: #db2777;
+}
+
+.bg-slate-600 {
+    background-color: #475569;
+}
+.bg-rose-600 {
+  background-color: #e11d48;
+}
+.bg-teal-600 {
+  background-color: #0d9488;
+}
+
+.bg-stone-600 {
+  background-color: #57534e;
+}
