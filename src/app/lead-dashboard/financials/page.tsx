@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-// একটি সেকশন কার্ডের জন্য Helper Component
+// একটি সেকশন কার্ডের জন্য Helper Component (কোনো পরিবর্তন নেই)
 const SectionCard = ({ section, status }: {
   section: { number: number; title: string; description: string; link: string; };
   status: 'Complete' | 'In Progress' | 'Pending';
@@ -34,7 +34,22 @@ const SectionCard = ({ section, status }: {
   );
 };
 
-// মূল পেজ কম্পוננט
+// ==========================================================
+// নতুন যুক্ত করা হয়েছে: সেকশন পূরণের শর্তাবলী
+// ==========================================================
+// এখানে প্রতিটি সেকশনের জন্য আবশ্যক 필্ডগুলোর তালিকা দিন।
+// এই 필্ডের নামগুলো আপনার فرم 컴포নেন্টের ইনপুট 필্ডের 'name' অ্যাট্রিবিউটের সাথে মিলতে হবে।
+const sectionRequiredFields: { [key: number]: string[] } = {
+    1: ['fullName', 'email', 'dateOfBirth', 'currentAddress', 'city', 'state', 'zipCode', 'ssn1', 'ssn2', 'ssn3'],
+    2: ['employerName', 'jobTitle', 'incomeAmount', 'payFrequency'], // উদাহরণস্বরূপ 필্ড
+    3: ['primaryResidenceValue', 'vehicle1Make', 'vehicle1Year'], // উদাহরণস্বরূপ 필্ড
+    4: ['rentOrMortgage', 'utilities', 'foodExpenses'], // উদাহরণস্বরূপ 필্ড
+    5: ['creditCard1Balance', 'studentLoanBalance'], // উদাহরণস্বরূপ 필্ড
+    6: ['bankruptcyLast8Years', 'relatedBankruptcyCases'], // উদাহরণস্বরূপ 필্ড
+    7: ['lawsuitsPending', 'coDebtors'], // উদাহরণস্বরূপ 필্ড
+};
+
+// মূল পেজ কম্পোনেন্ট
 export default async function FinancialsPage() {
     const supabase = createServerComponentClient({ cookies: () => cookies() });
     const { data: { user } } = await supabase.auth.getUser();
@@ -49,11 +64,10 @@ export default async function FinancialsPage() {
         .select('submission_data, current_step')
         .eq('user_id', user.id)
         .eq('form_id', 2)
-        .maybeSingle(); // maybeSingle ব্যবহার করলে যদি কোনো রো না পাওয়া যায়, তাহলে এরর দেয় না
+        .maybeSingle();
         
     const submissionData = submission?.submission_data || {};
     
-    // হার্ডকোডেড সেকশনের তালিকা
     const sections = [
         { number: 1, title: 'Personal Information', description: 'Basic personal and contact information', link: '/lead-dashboard/financials/1' },
         { number: 2, title: 'Employment & Income', description: 'Current and past employment, income sources', link: '/lead-dashboard/financials/2' },
@@ -64,16 +78,42 @@ export default async function FinancialsPage() {
         { number: 7, title: 'Legal & Additional Information', description: 'Legal matters, pending lawsuits, and additional disclosures', link: '/lead-dashboard/financials/7' }
     ];
 
-    // TODO: প্রতিটি সেকশনের জন্য স্ট্যাটাস এবং অগ্রগতি গণনা করার লজিক এখানে যোগ করতে হবে।
-    // আপাতত, আমরা ডামি স্ট্যাটাস ব্যবহার করছি।
-    const getSectionStatus = (sectionNumber: number): 'Complete' | 'In Progress' | 'Pending' => {
-        // এই লজিকটি পরে submissionData থেকে আসবে
-        if(sectionNumber < 3) return 'Complete';
-        if(sectionNumber === 3) return 'In Progress';
+    // ==========================================================
+    // পরিবর্তন করা হয়েছে: ডাইনামিক স্ট্যাটাস এবং অগ্রগতি গণনা
+    // ==========================================================
+    const getSectionStatus = (sectionNumber: number, data: any): 'Complete' | 'In Progress' | 'Pending' => {
+        const requiredFields = sectionRequiredFields[sectionNumber];
+        
+        // যদি কোনো আবশ্যক ফিল্ড ডিফাইন করা না থাকে, তাহলে পেন্ডিং ধরা হবে
+        if (!requiredFields || requiredFields.length === 0) {
+            return 'Pending';
+        }
+
+        const filledFields = requiredFields.filter(field => data[field] !== undefined && data[field] !== null && data[field] !== '');
+        
+        if (filledFields.length === requiredFields.length) {
+            return 'Complete';
+        }
+        if (filledFields.length > 0) {
+            return 'In Progress';
+        }
         return 'Pending';
     };
     
-    const overallProgress = 45; // এটিও ডাইনামিকভাবে গণনা করতে হবে
+    // প্রতিটি সেকশনের জন্য স্ট্যাটাস গণনা
+    let completedSectionsCount = 0;
+    const sectionsWithStatus = sections.map(section => {
+        const status = getSectionStatus(section.number, submissionData);
+        if (status === 'Complete') {
+            completedSectionsCount++;
+        }
+        return { ...section, status };
+    });
+
+    // সামগ্রিক অগ্রগতি গণনা
+    const overallProgress = sections.length > 0 
+        ? Math.round((completedSectionsCount / sections.length) * 100) 
+        : 0;
 
     return (
         <div className="p-6">
@@ -86,19 +126,22 @@ export default async function FinancialsPage() {
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
                     <div className="flex items-center justify-between mb-4">
                         <h4 className="text-lg font-medium text-gray-900">Progress Overview</h4>
+                        {/* ডাইনামিক অগ্রগতি এখানে দেখানো হচ্ছে */}
                         <span className="text-sm text-gray-500">{overallProgress}% Complete</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
+                        {/* ప్రోగ్రెస్ বারের প্রস্থ ডাইনামিকভাবে সেট করা হচ্ছে */}
                         <div className="bg-law-blue h-2 rounded-full" style={{ width: `${overallProgress}%` }}></div>
                     </div>
                 </div>
 
                 <div className="space-y-6">
-                    {sections.map(section => (
+                    {/* স্ট্যাটাস সহ সেকশনগুলো রেন্ডার করা হচ্ছে */}
+                    {sectionsWithStatus.map(section => (
                         <SectionCard
                             key={section.number}
                             section={section}
-                            status={getSectionStatus(section.number)}
+                            status={section.status}
                         />
                     ))}
                 </div>
