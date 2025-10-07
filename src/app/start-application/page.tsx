@@ -1,77 +1,97 @@
 import MultiStepApplicationForm from '@/components/application/MultiStepApplicationForm';
-import FormRenderer from '@/components/forms/FormRenderer';
 import { FieldRenderer } from '@/components/forms/FieldRenderer';
+import FormRenderer  from '@/components/forms/FormRenderer';
 import SignatureSection from '@/components/application/SignatureSection';
-import Step4_DetailedQuestions from '@/components/application/Step4_DetailedQuestions'; 
-// Helper: একটি একক ফিল্ড এবং তার লেবেল রেন্ডার করে
-const LabeledField = ({ field }: { field: any }) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {field.label.replace(/\s*\(.*\)/, '')}
-      {field.is_required && ' *'}
-    </label>
-    <FieldRenderer field={field} />
-  </div>
-);
+import Step4_DetailedQuestions from '@/components/application/Step4_DetailedQuestions';
+import { getFormFields } from '@/components/forms/getFormFields';
 
 // Helper: একটি সম্পূর্ণ ফর্ম সেকশন রেন্ডার করে
-const FormSection = ({ title, description, children }: { title: string, description: string, children: React.ReactNode }) => (
-  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:p-8">
-    <div className="mb-6">
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-500">{description}</p>
+const FormSection = ({ title, description, children }: { title: string; description: string; children: React.ReactNode }) => (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:p-8">
+        <div className="mb-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
+            <p className="text-gray-500">{description}</p>
+        </div>
+        {children}
     </div>
-    {children}
-  </div>
+);
+
+// Helper: একটি একক ফিল্ড এবং তার লেবেল রেন্ডার করে
+const LabeledField = ({ field }: { field: any }) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {field.label.replace(/\s*\*$/, '')} {/* Removes trailing asterisk */}
+        {field.is_required && <span className="text-red-500"> *</span>}
+      </label>
+      <FieldRenderer field={field} />
+    </div>
 );
 
 // মূল সার্ভার পেজ
 export default async function StartApplicationPage() {
+  const allFields = await getFormFields(1);
+
+  if (!allFields || allFields.length === 0) {
+    return <div>Error: No fields were fetched from the database.</div>;
+  }
+
+  // ফিল্ডগুলোকে তাদের গ্রুপ অনুযায়ী ভাগ করা
+  const fieldsByGroup = allFields.reduce((acc, field) => {
+    // field_group null হলে 'Default' গ্রুপ ব্যবহার করা হচ্ছে
+    const group = field.field_group?.trim() || 'Default';
+    if (!acc[group]) {
+      acc[group] = [];
+    }
+    acc[group].push(field);
+    return acc;
+  }, {} as Record<string, any[]>);
 
   // --- ধাপ ১-এর UI তৈরি ---
   const step1Content = (
     <FormSection key="step-1" title="Basic Information" description="Please provide your basic contact and referral information.">
-      <FormRenderer formId={1} step={1}>
-        {(groupedFields) => (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h4 className="font-medium text-gray-900">Primary Client</h4>
-                <div className="grid grid-cols-3 gap-3">
-                  {groupedFields['Primary Client']?.map(field => <LabeledField key={field.id} field={field} />)}
-                </div>
-              </div>
-              <div className="space-y-4">
-                <h4 className="font-medium text-gray-900">Second Client <span className="text-xs text-gray-400">(Optional)</span></h4>
-                <div className="grid grid-cols-3 gap-3">
-                  {groupedFields['Second Client']?.map(field => <LabeledField key={field.id} field={field} />)}
-                </div>
-              </div>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <h4 className="font-medium text-gray-900">Primary Client</h4>
+            <div className="grid grid-cols-3 gap-3">
+              {fieldsByGroup['Primary Client']?.map(field => <LabeledField key={field.id} field={field} />)}
             </div>
-            <div className="space-y-4">
-              <h4 className="font-medium text-gray-900">Address Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {groupedFields['Address Information']?.map(field => <LabeledField key={field.id} field={field} />)}
-              </div>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-medium text-gray-900">Contact Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {groupedFields['Contact Information']?.map(field => <LabeledField key={field.id} field={field} />)}
-                {groupedFields['Account Creation']?.map(field => <LabeledField key={field.id} field={field} />)}
-              </div>
-            </div>
-            {groupedFields['Referral Information']?.map(field => <FieldRenderer key={field.id} field={field} />)}
-            {groupedFields['Legal Problem']?.map(field => <LabeledField key={field.id} field={field} />)}
           </div>
-        )}
-      </FormRenderer>
+          <div className="space-y-4">
+            <h4 className="font-medium text-gray-900">Second Client <span className="text-xs text-gray-400">(Optional)</span></h4>
+            <div className="grid grid-cols-3 gap-3">
+              {fieldsByGroup['Second Client']?.map(field => <LabeledField key={field.id} field={field} />)}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="font-medium text-gray-900">Address Information</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {fieldsByGroup['Address Information']?.map(field => <LabeledField key={field.id} field={field} />)}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="font-medium text-gray-900">Contact Information</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {fieldsByGroup['Contact Information']?.map(field => <LabeledField key={field.id} field={field} />)}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="font-medium text-gray-900">How were you referred to our office?</h4>
+          {fieldsByGroup['Referral Information']?.map(field => <FieldRenderer key={field.id} field={field} />)}
+        </div>
+
+        <div>
+          {fieldsByGroup['Legal Problem']?.map(field => <LabeledField key={field.id} field={field} />)}
+        </div>
+      </div>
     </FormSection>
   );
 
-  // --- ধাপ ২, ৩, এবং ৪-এর UI তৈরি ---
-  // এই ধাপগুলোর UI আরও সহজ হতে পারে
-  const step2Content = (
+    const step2Content = (
     <FormSection key="step-2" title="Legal Notices" description="Please review the following important legal information carefully.">
       <div className="col-span-full prose max-w-none space-y-6">
         {/* === স্ট্যাটিক Legal Notices টেক্সট এখানে হার্ডকোড করা হচ্ছে === */}
@@ -188,16 +208,13 @@ export default async function StartApplicationPage() {
       </div>
     </FormSection>
   );
+  
+    const steps = [
+        step1Content,
+        step2Content,
+        step3Content,
+        step4Content,
+    ];
 
-
-  // সব ধাপের UI কম্পোনেন্টগুলোকে একটি অ্যারেতে রাখা
-  const steps = [
-    step1Content,
-    step2Content,
-    step3Content,
-    step4Content,
-  ];
-
-  // ক্লায়েন্ট কম্পোনেন্টে অ্যারেটি পাস করা
-  return <MultiStepApplicationForm stepComponents={steps} />;
+    return <MultiStepApplicationForm stepComponents={steps} />;
 }

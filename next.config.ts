@@ -24,6 +24,12 @@ const nextConfig = {
         port: '',
         pathname: '/storage/v1/object/public/**',
       },
+       {
+        protocol: 'https',
+        hostname: 'xvmlrrkylvjvafgmntwr.supabase.co', // আপনার Supabase প্রজেক্টের হোস্টনেম
+        port: '',
+        pathname: '/storage/v1/object/public/avatars/**', // শুধুমাত্র 'avatars' বাকেট থেকে ছবি লোড করার অনুমতি
+      },
     ],
   },
 };

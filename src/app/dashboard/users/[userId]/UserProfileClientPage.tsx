@@ -732,6 +732,20 @@ const FinancialQuestionnaireTab: FC<{ userId: string }> = ({ userId }) => {
     }
 
     const submissionData = submission.submission_data || {};
+
+     const formatCurrency = (value: any) => {
+        const num = parseFloat(value);
+        return isNaN(num) ? 'N/A' : `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+    
+     const DataField = ({ label, value, className = '' }: { label: string; value: React.ReactNode; className?: string }) => (
+        <div className={className}>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</p>
+            <div className="text-sm font-medium text-gray-800 mt-1 break-words">
+                {(value !== undefined && value !== null && value !== '') ? value : <span className="italic text-gray-400">Not Provided</span>}
+            </div>
+        </div>
+    );
     
     // সেকশনগুলোর জন্য একটি কনফিগারেশন অবজেক্ট
     const sections = [
@@ -740,7 +754,8 @@ const FinancialQuestionnaireTab: FC<{ userId: string }> = ({ userId }) => {
         { num: 3, title: 'Debts & Liabilities', icon: 'fa-credit-card' },
         { num: 4, title: 'Leases & Contracts', icon: 'fa-file-contract' },
         { num: 5, title: 'Current Income', icon: 'fa-dollar-sign' },
-        { num: 6, title: 'Current Expenses', icon: 'fa-shopping-cart' }
+        { num: 6, title: 'Current Expenses', icon: 'fa-shopping-cart' },
+        { num: 7, title: 'Legal & Additional Information', icon: 'fa-shopping-cart' }
     ];
 
     // Helper কম্পোনেন্ট: প্রতিটি সেকশনের ডেটা প্রদর্শনের জন্য
@@ -1607,6 +1622,208 @@ const FinancialQuestionnaireTab: FC<{ userId: string }> = ({ userId }) => {
                 </div>
             );
         } // End of case 5
+
+         case 6: {
+                return (
+                    <div className="p-6">
+                        {/* Section Header */}
+                        <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
+                            <div>
+                                <h3 className="text-xl font-semibold text-gray-900">Section 6: Monthly Expenses</h3>
+                                <p className="text-sm text-gray-600 mt-1">A detailed breakdown of the client's monthly expenses.</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-12">
+                            {/* Basic Information */}
+                            <div className="p-6 bg-gray-50 rounded-lg border">
+                                <h2 className="text-xl font-semibold text-gray-900 mb-6"><i className="fa-solid fa-info-circle mr-2 text-law-blue"></i>Basic Information</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <DataField label="Is this a Joint Filing?" value={submissionData.jointFiling} />
+                                    <DataField label="Do you live in separate households?" value={submissionData.separateHouseholds} />
+                                    <DataField label="Do expenses include another person's?" value={submissionData.otherPersonExpenses} />
+                                </div>
+                                
+                                <h3 className="text-lg font-medium text-gray-800 mt-8 mb-4">Dependents</h3>
+                                {(submissionData.dependents || []).length > 0 ? (
+                                    <div className="space-y-3">
+                                        {(submissionData.dependents).map((dep: any, index: number) => (
+                                            <div key={dep.id || index} className="p-3 bg-white rounded-md border grid grid-cols-3 gap-4">
+                                                <DataField label="Relationship" value={dep.relationship} />
+                                                <DataField label="Age" value={dep.age} />
+                                                <DataField label="Lives With" value={dep.livesWith} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : <p className="italic text-gray-600">No dependents listed.</p>}
+                            </div>
+
+                            {/* Housing Expenses */}
+                            <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
+                                <h2 className="text-xl font-semibold text-gray-900 mb-6"><i className="fa-solid fa-home mr-2 text-law-blue"></i>Housing Expenses</h2>
+                                <div className="space-y-4">
+                                    <DataField label="Primary Rent or Home Mortgage" value={formatCurrency(submissionData.primaryRentMortgage)} />
+                                    <DataField label="Includes Real Estate Taxes?" value={submissionData.includesRealEstateTaxes} />
+                                    {submissionData.includesRealEstateTaxes === 'yes' && <DataField label="Tax Amount" value={formatCurrency(submissionData.includesRealEstateTaxesAmount)} />}
+                                    <DataField label="Includes Property Insurance?" value={submissionData.includesInsurance} />
+                                    {submissionData.includesInsurance === 'yes' && <DataField label="Insurance Amount" value={formatCurrency(submissionData.includesInsuranceAmount)} />}
+                                    <DataField label="Additional Mortgage Payments?" value={submissionData.additionalMortgage} />
+                                    {submissionData.additionalMortgage === 'yes' && <DataField label="Additional Amount" value={formatCurrency(submissionData.additionalMortgageAmount)} />}
+                                </div>
+                            </div>
+
+                            {/* Monthly Living Expenses */}
+                            <div className="p-6 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <h2 className="text-xl font-semibold text-gray-900 mb-6"><i className="fa-solid fa-calendar mr-2 text-law-blue"></i>Monthly Living Expenses</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <DataField label="Utilities (Electricity, Heat)" value={formatCurrency(submissionData.utilityElectricity)} />
+                                    <DataField label="Utilities (Water, Sewer)" value={formatCurrency(submissionData.utilityWaterSewer)} />
+                                    <DataField label="Utilities (Telephone)" value={formatCurrency(submissionData.utilityTelephone)} />
+                                    <DataField label="Utilities (Other)" value={formatCurrency(submissionData.utilityOther)} />
+                                    <DataField label="Food & Housekeeping" value={formatCurrency(submissionData.foodSupplies)} />
+                                    <DataField label="Childcare & Education" value={formatCurrency(submissionData.childcareEducation)} />
+                                    <DataField label="Clothing & Laundry" value={formatCurrency(submissionData.clothingLaundry)} />
+                                    <DataField label="Personal Care" value={formatCurrency(submissionData.personalCare)} />
+                                    <DataField label="Medical & Dental" value={formatCurrency(submissionData.medicalExpenses)} />
+                                    <DataField label="Transportation" value={formatCurrency(submissionData.transportationExpenses)} />
+                                    <DataField label="Recreation/Entertainment" value={formatCurrency(submissionData.recreationExpenses)} />
+                                    <DataField label="Charitable Contributions" value={formatCurrency(submissionData.charitableContributions)} />
+                                    <DataField label="Life Insurance" value={formatCurrency(submissionData.lifeInsurance)} />
+                                    <DataField label="Health Insurance" value={formatCurrency(submissionData.healthInsurance)} />
+                                    <DataField label="Auto Insurance" value={formatCurrency(submissionData.autoInsurance)} />
+                                    <DataField label="Other Insurance" value={formatCurrency(submissionData.otherInsurance)} />
+                                </div>
+                            </div>
+                            
+                            {/* Additional & Bankruptcy Expenses */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Additional Expenses */}
+                                <div className="p-6 bg-indigo-50 rounded-lg border border-indigo-200">
+                                    <h2 className="text-xl font-semibold text-gray-900 mb-6"><i className="fa-solid fa-receipt mr-2 text-law-blue"></i>Additional Expenses</h2>
+                                    <DataField label="Alimony/Support Payments" value={formatCurrency(submissionData.alimonyPayments)} />
+                                    <DataField label="Dependent Support (not at home)" value={formatCurrency(submissionData.dependentSupport)} />
+                                    
+                                    <h3 className="text-lg font-medium text-gray-800 mt-6 mb-4">Other Real Estate Expenses</h3>
+                                    <DataField label="Mortgage" value={formatCurrency(submissionData.otherRealEstateMortgage)} />
+                                    <DataField label="Taxes" value={formatCurrency(submissionData.otherRealEstateTaxes)} />
+                                    <DataField label="Insurance" value={formatCurrency(submissionData.otherRealEstateInsurance)} />
+                                    
+                                    <h3 className="text-lg font-medium text-gray-800 mt-6 mb-4">Installment & Other Misc Payments</h3>
+                                    {(submissionData.installmentPayments || []).map((p: any, i: number) => <DataField key={i} label={`Installment #${i+1}`} value={`${p.description}: ${formatCurrency(p.amount)}`} />)}
+                                    {(submissionData.otherMiscExpenses || []).map((p: any, i: number) => <DataField key={i} label={`Other Expense #${i+1}`} value={`${p.description}: ${formatCurrency(p.amount)}`} />)}
+                                    
+                                    <DataField label="Expected Changes in Expenses" value={<p className="whitespace-pre-wrap">{submissionData.expectedChanges}</p>} />
+                                </div>
+                                
+                                {/* Bankruptcy Form (707b) Expenses */}
+                                <div className="p-6 bg-red-50 rounded-lg border border-red-200">
+                                    <h2 className="text-xl font-semibold text-gray-900 mb-6"><i className="fa-solid fa-gavel mr-2 text-law-blue"></i>Bankruptcy Form (707b) Expenses</h2>
+                                    <DataField label="Education for Employment/Disabled Child" value={formatCurrency(submissionData.specializedEducationExpense)} />
+                                    <DataField label="Child Care" value={formatCurrency(submissionData.childCareExpense)} />
+                                    <DataField label="Disability Insurance" value={formatCurrency(submissionData.specializedDisabilityInsurance)} />
+                                    <DataField label="Health Savings Account (HSA)" value={formatCurrency(submissionData.healthSavingsAccount)} />
+                                    <DataField label="Elder/Disabled Family Care" value={formatCurrency(submissionData.elderCare)} />
+                                    
+                                    <h3 className="text-lg font-medium text-gray-800 mt-6 mb-4">Payroll, Court & Retirement Payments</h3>
+                                    {(submissionData.payrollDeductions || []).map((p: any, i: number) => <DataField key={i} label={`Payroll Deduction #${i+1}`} value={`${p.description}: ${formatCurrency(p.amount)}`} />)}
+                                    {(submissionData.courtOrderedPayments || []).map((p: any, i: number) => <DataField key={i} label={`Court Payment #${i+1}`} value={`${p.description}: ${formatCurrency(p.amount)}`} />)}
+                                    {(submissionData.retirementContributions || []).map((p: any, i: number) => <DataField key={i} label={`Retirement Contribution #${i+1}`} value={`${p.description}: ${formatCurrency(p.amount)}`} />)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+           case 7: { // Added block scope
+            const submissionData = submission?.submission_data || {};
+            
+            // Helper: সাধারণ ডেটা ফিল্ড দেখানোর জন্য
+            const DataField = ({ label, value }: { label: string; value: React.ReactNode }) => (
+                <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</p>
+                    <div className="text-sm font-medium text-gray-800 mt-1 break-words">
+                        {(value !== undefined && value !== null && value !== '') ? value : <span className="italic text-gray-400">Not Provided</span>}
+                    </div>
+                </div>
+            );
+            
+            // Helper: পুনরাবৃত্তিযোগ্য এন্ট্রির জন্য একটি জেনেরিক ডিসপ্লে কম্পোনেন্ট
+            const RepeatingEntryDisplay = ({ title, dataKey, fields, theme, noneFlagText }: { title: string; dataKey: string; fields: { key: string; label: string }[]; theme: string; noneFlagText: string }) => {
+                const entries = submissionData[dataKey] || [];
+                const noneFlag = `no_${dataKey}`;
+                return (
+                    <div className={`p-6 bg-${theme}-50 rounded-lg border border-${theme}-200`}>
+                        <h3 className={`text-lg font-semibold text-gray-900 mb-4`}>{title}</h3>
+                        {submissionData[noneFlag] ? (
+                            <p className="italic text-gray-600">{noneFlagText}</p>
+                        ) : (
+                            <div className="space-y-4">
+                                {entries.length > 0 ? entries.map((entry: any, index: number) => (
+                                    <div key={entry.id || index} className={`p-4 bg-white rounded-lg border border-${theme}-300`}>
+                                        <h4 className="text-md font-medium text-gray-800 mb-3 pb-2 border-b">Entry #{index + 1}</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {fields.map(field => (
+                                                <DataField key={field.key} label={field.label} value={entry[field.key]} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )) : <p className="italic text-gray-600">No entries provided for this section.</p>}
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            return (
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
+                        <div>
+                            <h3 className="text-xl font-semibold text-gray-900">Section 7: Statement of Financial Affairs</h3>
+                            <p className="text-sm text-gray-600 mt-1">Detailed information about financial history and other affairs.</p>
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-8">
+                        {/* প্রশ্ন ১ থেকে ২৮ পর্যন্ত সবগুলোর জন্য আলাদা ডিসপ্লে কম্পোনেন্ট */}
+                        <RepeatingEntryDisplay title="1. Previous Addresses (Last 3 Years)" dataKey="previousAddresses" theme="blue" noneFlagText="Client has not lived at any other address." fields={[{ key: 'address', label: 'Previous Address' }, { key: 'fromDate', label: 'From' }, { key: 'toDate', label: 'To' }]} />
+                        <RepeatingEntryDisplay title="2. Community Property (Last 8 Years)" dataKey="communityProperties" theme="green" noneFlagText="Client did not live in a community property state." fields={[{ key: 'state', label: 'State' }, { key: 'partnerInfo', label: 'Spouse/Partner Info' }]} />
+                        
+                        {/* প্রশ্ন ৩ এবং ৪ (Income) - এর জন্য সামারি ভিউ */}
+                        <div className="p-6 bg-yellow-50 rounded-lg border border-yellow-200">
+                             <h3 className="text-lg font-semibold text-gray-900 mb-4">3. & 4. Income Information</h3>
+                             <p className="italic text-gray-600">A detailed income breakdown will be available in the full report. This section contains complex nested data.</p>
+                        </div>
+
+                        <RepeatingEntryDisplay title="5. Consumer Debt Payments" dataKey="consumerDebtPayments" theme="red" noneFlagText="No consumer debt payments over $600 were made." fields={[{ key: 'creditorName', label: 'Creditor' }, { key: 'amountPaid', label: 'Amount Paid' }, { key: 'amountOwed', label: 'Amount Owed' }]} />
+                        <RepeatingEntryDisplay title="6. Business Debt Payments" dataKey="businessDebtPayments" theme="orange" noneFlagText="No business debt payments over $6,425 were made." fields={[{ key: 'creditorName', label: 'Creditor' }, { key: 'amountPaid', label: 'Amount Paid' }, { key: 'amountOwed', label: 'Amount Owed' }]} />
+                        <RepeatingEntryDisplay title="7. Payments to Insiders" dataKey="insiderPayments" theme="pink" noneFlagText="No payments to insiders were made." fields={[{ key: 'insiderName', label: 'Insider Name' }, { key: 'amountPaid', label: 'Amount Paid' }, { key: 'reason', label: 'Reason' }]} />
+                        <RepeatingEntryDisplay title="8. Property Transfers to Insiders" dataKey="insiderPropertyTransfers" theme="indigo" noneFlagText="No property transfers to insiders were made." fields={[{ key: 'insiderName', label: 'Insider Name' }, { key: 'amountPaid', label: 'Amount Paid' }, { key: 'reason', label: 'Reason' }]} />
+                        <RepeatingEntryDisplay title="9. Legal Proceedings" dataKey="legalProceedings" theme="gray" noneFlagText="No legal proceedings in the past year." fields={[{ key: 'caseTitle', label: 'Case Title' }, { key: 'caseNature', label: 'Nature of Case' }, { key: 'courtLocation', label: 'Court/Agency' }, { key: 'caseStatus', label: 'Status' }]} />
+                        <RepeatingEntryDisplay title="10. Property Repossessions" dataKey="propertyRepossessions" theme="red" noneFlagText="No property repossessions in the past year." fields={[{ key: 'creditor', label: 'Creditor' }, { key: 'description', label: 'Property Description' }, { key: 'date', label: 'Date' }]} />
+                        <RepeatingEntryDisplay title="11. Setoffs by Creditors" dataKey="setoffs" theme="cyan" noneFlagText="No setoffs by creditors in the last 90 days." fields={[{ key: 'creditorName', label: 'Creditor' }, { key: 'actionDescription', label: 'Action Taken' }, { key: 'setoffAmount', label: 'Setoff Amount' }]} />
+                        <RepeatingEntryDisplay title="12. Property in Possession of Assignee" dataKey="propertyInPossessionEntries" theme="indigo" noneFlagText="No property held by an assignee." fields={[{ key: 'assigneeName', label: 'Assignee Name' }, { key: 'assignmentDate', label: 'Date' }, { key: 'assignmentTerms', label: 'Terms' }]} />
+                        <RepeatingEntryDisplay title="13. Gifts Made" dataKey="giftsMade" theme="pink" noneFlagText="No gifts over $600 were made." fields={[{ key: 'recipient', label: 'Recipient' }, { key: 'description', label: 'Description' }, { key: 'value', label: 'Value' }]} />
+                        <RepeatingEntryDisplay title="14. Charitable Contributions" dataKey="charitableContributions" theme="emerald" noneFlagText="No charitable contributions over $600 were made." fields={[{ key: 'charityName', label: 'Charity' }, { key: 'description', label: 'Contribution' }, { key: 'value', label: 'Value' }]} />
+                        <RepeatingEntryDisplay title="15. Losses (Fire, Theft, Gambling)" dataKey="losses" theme="amber" noneFlagText="No significant losses reported." fields={[{ key: 'lossDescription', label: 'Description' }, { key: 'lossInsurance', label: 'Insurance Coverage' }, { key: 'lossValue', label: 'Value of Loss' }]} />
+                        <RepeatingEntryDisplay title="16. Payments for Bankruptcy Consultation" dataKey="bankruptcyPayments" theme="slate" noneFlagText="No payments made for bankruptcy consultation." fields={[{ key: 'payeeName', label: 'Paid To' }, { key: 'paymentAmount', label: 'Amount' }, { key: 'paymentDate', label: 'Date' }]} />
+                        <RepeatingEntryDisplay title="17. Payments to Creditor Assistance Services" dataKey="creditorAssistancePayments" theme="rose" noneFlagText="No payments made to creditor assistance services." fields={[{ key: 'payeeName', label: 'Paid To' }, { key: 'paymentAmount', label: 'Amount' }, { key: 'paymentDate', label: 'Date' }]} />
+                        <RepeatingEntryDisplay title="18. Property Transfers" dataKey="propertyTransfers" theme="teal" noneFlagText="No property transfers reported." fields={[{ key: 'recipient', label: 'Recipient' }, { key: 'propertyDescription', label: 'Property' }, { key: 'transferDate', label: 'Date' }]} />
+                        <RepeatingEntryDisplay title="18.5. Asset Protection Transfers" dataKey="assetProtectionTransfers" theme="orange" noneFlagText="No asset protection transfers reported." fields={[{ key: 'recipient', label: 'Recipient' }, { key: 'propertyDescription', label: 'Property' }, { key: 'transferDate', label: 'Date' }]} />
+                        <RepeatingEntryDisplay title="19. Self-Settled Trust Transfers" dataKey="trustTransfers" theme="violet" noneFlagText="No self-settled trust transfers reported." fields={[{ key: 'trustName', label: 'Trust Name' }, { key: 'propertyDescription', label: 'Property' }, { key: 'transferDate', label: 'Date' }]} />
+                        <RepeatingEntryDisplay title="20. Closed Financial Accounts" dataKey="closedAccounts" theme="blue" noneFlagText="No financial accounts closed in the past year." fields={[{ key: 'institution', label: 'Institution' }, { key: 'last4Digits', label: 'Last 4 Digits' }, { key: 'lastBalance', label: 'Last Balance' }]} />
+                        <RepeatingEntryDisplay title="21. Safe Deposit Boxes" dataKey="safeDepositBoxes" theme="gray" noneFlagText="No safe deposit boxes reported." fields={[{ key: 'institution', label: 'Institution' }, { key: 'contents', label: 'Contents' }]} />
+                        <RepeatingEntryDisplay title="22. Storage Units" dataKey="storageUnits" theme="stone" noneFlagText="No storage units reported." fields={[{ key: 'institution', label: 'Facility' }, { key: 'contents', label: 'Contents' }]} />
+                        <RepeatingEntryDisplay title="23. Property Held for Others" dataKey="propertyHeldForOthers" theme="lime" noneFlagText="No property held for others." fields={[{ key: 'ownerName', label: 'Owner' }, { key: 'propertyDescription', label: 'Property' }, { key: 'propertyValue', label: 'Value' }]} />
+                        <RepeatingEntryDisplay title="24. Environmental Law Violations" dataKey="environmentalViolations" theme="green" noneFlagText="No environmental law violations reported." fields={[{ key: 'site', label: 'Site' }, { key: 'governmentalUnit', label: 'Governmental Unit' }]} />
+                        <RepeatingEntryDisplay title="25. Hazardous Material Releases" dataKey="hazardousReleases" theme="red" noneFlagText="No hazardous material releases reported." fields={[{ key: 'site', label: 'Site' }, { key: 'governmentalUnit', label: 'Governmental Unit' }]} />
+                        <RepeatingEntryDisplay title="26. Environmental Legal Proceedings" dataKey="environmentalProceedings" theme="yellow" noneFlagText="No environmental legal proceedings." fields={[{ key: 'caseTitle', label: 'Case' }, { key: 'court', label: 'Court/Agency' }, { key: 'nature', label: 'Nature of Case' }]} />
+                        <RepeatingEntryDisplay title="27. Business Connections" dataKey="businessConnections" theme="purple" noneFlagText="No business connections in the past 4 years." fields={[{ key: 'businessName', label: 'Business' }, { key: 'businessNature', label: 'Nature' }, { key: 'ein', label: 'EIN' }]} />
+                        <RepeatingEntryDisplay title="28. Financial Statements to Institutions" dataKey="financialStatements" theme="cyan" noneFlagText="No financial statements given." fields={[{ key: 'recipient', label: 'Recipient' }, { key: 'dateIssued', label: 'Date Issued' }]} />
+                    </div>
+                </div>
+            );
+        } // End of case 7
        
             default:
                 return (
