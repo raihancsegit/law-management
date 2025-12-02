@@ -13,20 +13,19 @@ type User = {
 };
 
 // NavItem কম্পোনেন্ট (অপরিবর্তিত)
-const NavItem = ({ href, icon, label, pathname }: { 
-  href: string, 
-  icon: string, 
-  label: string, 
-  pathname: string 
+const NavItem = ({ href, icon, label, pathname }: {
+  href: string,
+  icon: string,
+  label: string,
+  pathname: string
 }) => {
   const isActive = pathname === href; // startsWith ব্যবহার করলে সাব-রুটও অ্যাক্টিভ দেখাবে
 
   return (
     <li>
       <Link href={href}>
-        <div className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors duration-200 ${
-            isActive ? 'bg-law-blue text-white' : 'text-gray-700'
-        }`}>
+        <div className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors duration-200 ${isActive ? 'bg-law-blue text-white' : 'text-gray-700'
+          }`}>
           <i className={`${icon} mr-3 w-5 text-center ${isActive ? 'text-white' : 'text-gray-400'}`}></i>
           <span>{label}</span>
         </div>
@@ -50,8 +49,9 @@ export default function Sidebar({ user }: { user: User }) {
     { href: "/lead-dashboard/documents", icon: "fa-solid fa-folder-open", label: "My Documents" },
     { href: "/lead-dashboard/financials", icon: "fa-solid fa-clipboard-list", label: "Financial Questionnaire" },
     { href: "/lead-dashboard/messages", icon: "fa-solid fa-comments", label: "Secure Messages" },
+    { href: "/lead-dashboard/settings", icon: "fa-solid fa-cog", label: "Settings" },
   ];
-  
+
   // ব্যবহারকারীর ভূমিকা অনুযায়ী সঠিক মেনুটি বেছে নেওয়া
   const menuItems = user.role === 'client' ? clientMenu : leadMenu;
 
@@ -65,14 +65,14 @@ export default function Sidebar({ user }: { user: User }) {
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <h1 className="text-lg font-bold text-law-blue">Cohen & Cohen P.C.</h1>
       </div>
-      
+
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
           {menuItems.map(item => (
             <NavItem key={item.href} {...item} pathname={pathname} />
           ))}
         </ul>
-        
+
         <div className="border-t border-gray-200 mt-6 pt-6">
           <ul className="space-y-2">
             {commonMenuItems.map(item => (
@@ -90,7 +90,7 @@ export default function Sidebar({ user }: { user: User }) {
           </ul>
         </div>
       </nav>
-      
+
       <div className="border-t border-gray-200 p-4">
         <div className="flex items-center space-x-3">
           <img src={user.avatar_url || 'https://placehold.co/40x40'} alt="Avatar" className="w-8 h-8 rounded-full" />
